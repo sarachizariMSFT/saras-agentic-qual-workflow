@@ -1,0 +1,71 @@
+{
+  "pipeline_version": "0.3.0",
+  "models": ["opus-4.8", "gpt-5.5"],
+  "loop": {
+    "maxIterations": 10,
+    "onExhaustion": "escalate_to_human",
+    "appliesTo": [
+      "revision-loop (producer step fails a hard eval gate -> author revises -> re-eval)",
+      "challenge-loop (Devil's Advocate marks unsupported -> author revises -> re-challenge)",
+      "mental-model-loop (Mental Model Agent refines root cause analysis)",
+      "reconcile-loop (Editor <-> Storyteller consistency)",
+      "learning-loop (per open correction record)"
+    ],
+    "note": "Circuit breaker. When a loop hits maxIterations without passing, the Conductor sets the step to 'blocked', writes the reason, and stops at the nearest human checkpoint."
+  },
+  "evals": {
+    "hallucinationMinCoverage": 0.9,
+    "severityInflationMaxShare": 0.6,
+    "participantCoverageMinParticipants": 2,
+    "singleParticipantThemeFlag": true
+  },
+  "evidence": {
+    "requireExactQuotes": true,
+    "requireTimestamps": true,
+    "requireClips": true,
+    "allowPendingClips": true,
+    "appliesTo": "said",
+    "timestampPattern": "^\\d{1,2}:\\d{2}(:\\d{2})?$",
+    "clipUrlPattern": "heymarvin\\.com|marvin",
+    "note": "Owned by the Evidence-Verifier agent. Gates apply to 'said' (participant verbatim) evidence: quotes must be exact, timestamped, and carry a Marvin clip_url. allowPendingClips=true accepts clip_status:'pending' so the run isn't deadlocked before clips are cut (Marvin MCP not wired); pending never counts as a created clip. Set requireClips=false only if a study intentionally ships before clips are cut."
+  },
+  "risk": {
+    "smallSampleN": 1,
+    "minEvidenceForRec": 2,
+    "categories": [
+      "overgeneralization",
+      "causal_claim",
+      "weak_support_high_impact",
+      "low_evidence_high_confidence",
+      "contradiction",
+      "sensitive_topic",
+      "speculation",
+      "absolute_recommendation"
+    ],
+    "note": "Owned by the Risk-Flagger agent. Risk flags are NOT a pass/fail gate — they raise risky arguments for human review at the checkpoints. Human decisions (acknowledged/dismissed/fixed) persist across re-runs."
+  },
+  "privacy": {
+    "codeScheme": "opaque",
+    "failClosed": true,
+    "scanEveryStep": true,
+    "extraDetectors": ["email", "phone", "unknown_proper_noun"],
+    "note": "Owned by the Privacy agent. Codes are OPAQUE (P01, P02…); session date/time lives ONLY in the private crosswalk, never in shareable files. The scan fails CLOSED: a missing/empty participant key is an error, not a pass. Beyond roster names/companies, pattern detectors catch emails/phones and flag unknown proper nouns (third parties) for human review. PII is scanned on every step output, not just the final report."
+  },
+  "comparison": {
+    "models": ["opus-4.8", "gpt-5.5"],
+    "runsPerModel": 1,
+    "note": "Dual-model comparison. runsPerModel>1 lets you separate model differences from LLM sampling noise; with n=1 the diff is disclosed as a single-run snapshot. compare.mjs verifies the two runs used DIFFERENT models and IDENTICAL input hashes before trusting any agreement number."
+  },
+  "analysis": {
+    "saturationThreshold": 2,
+    "note": "Number of consecutive transcripts with no new codes to trigger saturation indicator (owned by Open Coding agent)."
+  },
+  "mental_model": {
+    "minSeverityForFlag": "high",
+    "note": "Mental Model Agent flags assumptions with high/critical severity for Product Implication Agent."
+  },
+  "product_implications": {
+    "minPriorityLevel": "medium",
+    "note": "Product Implication Agent prioritizes opportunities as high/medium/low; only high/medium typically go on roadmap."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/codes.schema.json",
+  "title": "Open Codes",
+  "description": "Produced by the Open Coding agent (02-open-codes.json). Bottom-up, inductive first-pass codebook with saturation statistics. Every code is grounded in 2+ examples with participant + timestamp.",
+  "type": "object",
+  "required": ["codes"],
+  "additionalProperties": true,
+  "properties": {
+    "codes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["code_id", "code_name", "definition", "examples"],
+        "additionalProperties": true,
+        "properties": {
+          "code_id": { "type": "string", "pattern": "^CODE-[0-9]{3}$" },
+          "code_name": { "type": "string", "minLength": 3, "description": "verb + noun, data-grounded." },
+          "definition": { "type": "string", "minLength": 8 },
+          "category": { "type": "string" },
+          "evidence_count": { "type": "integer", "minimum": 0 },
+          "participants": { "type": "array", "items": { "type": "string" } },
+          "examples": {
+            "type": "array",
+            "minItems": 2,
+            "description": "At least 2 grounded examples per code.",
+            "items": {
+              "type": "object",
+              "required": ["participant", "timestamp", "quote"],
+              "additionalProperties": true,
+              "properties": {
+                "participant": { "type": "string" },
+                "timestamp": { "type": "string" },
+                "quote": { "type": "string", "minLength": 3 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "codebook_statistics": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "total_codes": { "type": "integer", "minimum": 0 },
+        "codes_by_category": { "type": "object", "additionalProperties": true },
+        "saturation_indicator": { "type": "string" },
+        "coverage": { "type": "string" }
+      }
+    }
+  }
+}

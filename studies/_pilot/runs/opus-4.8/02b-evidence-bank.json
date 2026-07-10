@@ -1,0 +1,35 @@
+{
+  "model": "opus-4.8",
+  "evidence": [
+    {
+      "evidence_id": "EV-001",
+      "participant": "P01",
+      "locator": "00:02:15",
+      "quote": "I couldn't tell what the agent had changed, so I opened every file to check.",
+      "observation_type": "did",
+      "interpretation": "low change-visibility",
+      "confidence": "high",
+      "theme": "THEME-001"
+    },
+    {
+      "evidence_id": "EV-002",
+      "participant": "P02",
+      "locator": "00:04:05",
+      "quote": "it said it was done but I didn't trust that until I ran the tests myself.",
+      "observation_type": "said",
+      "interpretation": "verify-before-trust",
+      "confidence": "high",
+      "theme": "THEME-001"
+    },
+    {
+      "evidence_id": "EV-003",
+      "participant": "P03",
+      "locator": "00:11:10",
+      "quote": "the diff view finally showed me what happened and I relaxed.",
+      "observation_type": "said",
+      "interpretation": "legibility -> relief",
+      "confidence": "high",
+      "theme": "THEME-001"
+    }
+  ]
+}

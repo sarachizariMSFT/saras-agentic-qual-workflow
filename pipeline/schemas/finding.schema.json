@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/finding.schema.json",
+  "title": "UXR Finding",
+  "description": "A single finding produced by a specialist agent. Every finding MUST be traceable to transcript evidence.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "statement",
+    "method",
+    "method_justification",
+    "confidence",
+    "evidence",
+    "created_by",
+    "model",
+    "run_id"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable ID, e.g. PAIN-003, BEH-012, PAPER-005, REC-004, MOM-002, STORY-001.",
+      "pattern": "^(BEH|VERB|PAIN|PAPER|REC|THEME|MOM|STORY)-[0-9]{3}$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "behavioral_evidence",
+        "verbatim",
+        "pain_point",
+        "papercut",
+        "design_recommendation",
+        "theme",
+        "powerful_moment",
+        "story"
+      ]
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 8,
+      "description": "The finding in one clear sentence. No jargon."
+    },
+    "method": {
+      "type": "string",
+      "enum": ["thematic", "jtbd", "affinity", "hybrid"],
+      "description": "Analysis method used for THIS finding."
+    },
+    "method_justification": {
+      "type": "string",
+      "minLength": 8,
+      "description": "Why this method fits this finding. Required by the hybrid-with-justification rule."
+    },
+    "severity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "1 = trivial, 5 = blocking. Required for pain_point and papercut."
+    },
+    "frequency": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of distinct participants who exhibited/expressed this. MUST NOT exceed the distinct participants in evidence[] ∪ supporting_participants[] (enforced by the frequency_integrity gate). Prefer supporting_participants for the source of truth."
+    },
+    "supporting_participants": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "The distinct participant codes that support this finding. Source of truth for frequency; render as n/N in reports."
+    },
+    "evidence_mode": {
+      "type": "string",
+      "enum": ["participant_self_report", "observed_behavior", "researcher_inference"],
+      "description": "What KIND of claim this is. Keeps 'a participant said X' separate from 'we observed X' and 'we infer X'."
+    },
+    "causal_strength": {
+      "type": "string",
+      "enum": ["none", "suggestive", "supported_by_behavior", "experimental"],
+      "description": "For findings that assert causation. 'none' = descriptive only. Causal statements without behavioral evidence are flagged by causal_support."
+    },
+    "alternative_explanations": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Rival explanations the analyst considered and why this one is preferred. Guards against premature causal claims."
+    },
+    "representativeness": {
+      "type": "string",
+      "enum": ["representative", "illustrative", "outlier"],
+      "description": "For themes/moments: is this typical of the sample, a single illustrative case, or a vivid outlier? Prevents a dramatic clip from anchoring a recommendation."
+    },
+    "goal_coverage": {
+      "type": "object",
+      "description": "On a synthesis object: per-hypothesis verdict. Each value is { verdict, supporting[], refuting[] }; verdict ∈ supported|refuted|mixed|insufficient_evidence. Refuted/insufficient count as valid coverage.",
+      "additionalProperties": true
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "At least one citation back to a transcript. This is the anti-hallucination anchor.",
+      "items": {
+        "type": "object",
+        "required": ["transcript_id", "participant", "locator", "quote", "observation_type"],
+        "additionalProperties": false,
+        "properties": {
+          "transcript_id": { "type": "string" },
+          "participant": { "type": "string" },
+          "locator": {
+            "type": "string",
+            "description": "Timestamp (hh:mm:ss) or line reference (L120-L128) inside the transcript."
+          },
+          "quote": {
+            "type": "string",
+            "minLength": 3,
+            "description": "Verbatim excerpt copied from the transcript. Must appear in the source. For 'said' evidence this must be an EXACT verbatim substring (enforced by the quote_exactness gate)."
+          },
+          "clip_url": {
+            "type": "string",
+            "description": "Marvin video-clip URL for this quote (cut by marvin-clipper). Required for 'said' evidence when config.evidence.requireClips is true.",
+            "format": "uri"
+          },
+          "clip_status": {
+            "type": "string",
+            "enum": ["pending", "created", "failed"],
+            "description": "Lifecycle of the Marvin clip: pending = queued for marvin-clipper, created = clip_url populated."
+          },
+          "observation_type": {
+            "type": "string",
+            "enum": ["said", "did", "observed"],
+            "description": "REQUIRED — no silent default. said = participant verbatim (subject to exact-quote/timestamp/clip gates); did = participant action; observed = moderator/observer note."
+          },
+          "source_type": {
+            "type": "string",
+            "enum": ["transcript_speech", "video_observed_behavior", "moderator_note", "observer_note", "stakeholder_note", "chat_followup"],
+            "description": "Provenance of this evidence item. Different source types carry different evidentiary weight."
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "emotion": {
+      "type": "string",
+      "description": "For powerful_moment: dominant emotion, e.g. frustration, delight, relief, anxiety, pride."
+    },
+    "intensity": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5,
+      "description": "For powerful_moment: emotional intensity / memorability. 5 = unforgettable."
+    },
+    "clip_worthy": {
+      "type": "boolean",
+      "description": "For powerful_moment: true if this is a candidate for a video clip (feeds marvin-clipper)."
+    },
+    "related_finding_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "contradicts": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "IDs of findings this one challenges. Used by Devil's Advocate."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Agent name, e.g. 'pain-points'."
+    },
+    "model": {
+      "type": "string",
+      "enum": ["opus-4.8", "gpt-5.5"]
+    },
+    "run_id": { "type": "string" }
+  }
+}

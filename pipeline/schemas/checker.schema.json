@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/checker.schema.json",
+  "title": "Checker Verdict",
+  "description": "Output of a checking agent (Devil's Advocate, Evidence-Verifier). Making the checkers' judgments structured means they can themselves be evaluated and human-audited — the checkers are no longer un-checked.",
+  "type": "object",
+  "required": ["checker", "finding_id", "verdict", "rationale"],
+  "additionalProperties": false,
+  "properties": {
+    "checker": {
+      "type": "string",
+      "enum": ["devils-advocate", "evidence-verifier"]
+    },
+    "finding_id": {
+      "type": "string",
+      "pattern": "^(BEH|VERB|PAIN|PAPER|REC|THEME|MOM|STORY)-[0-9]{3}$"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["holds", "weak", "unsupported", "verified", "quote_mismatch", "missing_clip", "missing_timestamp"],
+      "description": "Devil's Advocate: holds|weak|unsupported. Evidence-Verifier: verified|quote_mismatch|missing_clip|missing_timestamp."
+    },
+    "validity_threat": {
+      "type": "string",
+      "description": "For weak/unsupported: name the specific threat (small sample, confirmation bias, causal overreach, unrepresentative, etc.)."
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 8,
+      "description": "Why this verdict — must cite transcript context, not vibes."
+    },
+    "human_audit": {
+      "type": "string",
+      "enum": ["unreviewed", "agree", "disagree"],
+      "description": "Sampled human check of the checker's call. 'disagree' feeds the learning loop to recalibrate the checker."
+    }
+  }
+}

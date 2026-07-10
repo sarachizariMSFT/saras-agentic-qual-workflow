@@ -1,0 +1,60 @@
+{
+  "empathy_snapshots": [
+    {
+      "participant_id": "P01",
+      "empathy_snapshot": "Began delegating, then quietly took the wheel back when the change went dark.",
+      "emotional_journey_moments": [
+        {
+          "moment": "unexpected change",
+          "what_happened": "files changed without a visible diff",
+          "participant_reaction": "opened every file",
+          "what_it_suggests": "needs visibility before trust",
+          "timestamp": "00:02:15"
+        }
+      ],
+      "related_narrative_ids": [
+        "P01"
+      ],
+      "evidence_citations": [
+        {
+          "participant": "P01",
+          "quote": "honestly I ended up babysitting it the whole time.",
+          "timestamp": "00:09:40",
+          "signal_strength": "described"
+        }
+      ]
+    },
+    {
+      "participant_id": "P03",
+      "empathy_snapshot": "Impatience gave way to relief the moment the diff made the change legible.",
+      "emotional_journey_moments": [
+        {
+          "moment": "diff appears",
+          "what_happened": "diff showed the change",
+          "participant_reaction": "relaxed",
+          "what_it_suggests": "legibility restores calm",
+          "timestamp": "00:11:10"
+        }
+      ],
+      "related_narrative_ids": [
+        "P03"
+      ],
+      "evidence_citations": [
+        {
+          "participant": "P03",
+          "quote": "the diff view finally showed me what happened and I relaxed.",
+          "timestamp": "00:11:10",
+          "signal_strength": "showed"
+        }
+      ]
+    }
+  ],
+  "empathy_findings": [
+    {
+      "finding_id": "PAIN-001",
+      "original_theme": "visibility",
+      "empathy_language": "They were happy to hand off the work; they just did not want to lose sight of the outcome they were still responsible for.",
+      "stakeholder_implications": "Visibility is a trust prerequisite, not a nice-to-have."
+    }
+  ]
+}

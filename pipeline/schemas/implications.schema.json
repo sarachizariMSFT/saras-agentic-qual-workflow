@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/implications.schema.json",
+  "title": "Product Implications",
+  "description": "Produced by the Product Implication agent (08-product-implications.json). Design principles, opportunity areas, risks, and future research questions. Strategy and principles, not feature specs. Every implication links back to source findings.",
+  "type": "object",
+  "additionalProperties": true,
+  "anyOf": [
+    { "required": ["design_principles"] },
+    { "required": ["opportunity_areas"] }
+  ],
+  "properties": {
+    "design_principles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["principle", "source_findings"],
+        "additionalProperties": true,
+        "properties": {
+          "principle": { "type": "string", "minLength": 4 },
+          "rationale": { "type": "string" },
+          "source_findings": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+          "mental_model_connection": { "type": "string" },
+          "priority": { "type": "string", "enum": ["high", "medium", "low"] }
+        }
+      }
+    },
+    "opportunity_areas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["opportunity_id", "area", "underlying_need"],
+        "additionalProperties": true,
+        "properties": {
+          "opportunity_id": { "type": "string" },
+          "area": { "type": "string" },
+          "underlying_need": { "type": "string" },
+          "current_state": { "type": "string" },
+          "desired_state": { "type": "string" },
+          "evidence_strength": { "type": "string" },
+          "complexity": { "type": "string" },
+          "timeline_estimate": { "type": "string" },
+          "design_questions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "risk_areas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["risk"],
+        "additionalProperties": true,
+        "properties": {
+          "risk": { "type": "string" },
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+          "source_findings": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "research_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["question"],
+        "additionalProperties": true,
+        "properties": {
+          "question": { "type": "string" },
+          "rationale": { "type": "string" }
+        }
+      }
+    }
+  }
+}

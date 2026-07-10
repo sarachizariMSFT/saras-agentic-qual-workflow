@@ -1,0 +1,16 @@
+{
+  "name": "uxr-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Traceable, eval-gated, multi-agent UXR qualitative analysis pipeline (zero runtime deps).",
+  "scripts": {
+    "init-study": "node lib/run.mjs init",
+    "hash-inputs": "node lib/run.mjs hash",
+    "evals": "node lib/evals.mjs",
+    "dashboard": "node lib/dashboard.mjs",
+    "compare": "node lib/compare.mjs",
+    "serve": "node lib/server.mjs",
+    "selftest": "node lib/selftest.mjs"
+  }
+}

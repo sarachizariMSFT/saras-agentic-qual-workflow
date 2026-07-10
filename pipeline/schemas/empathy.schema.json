@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/empathy.schema.json",
+  "title": "Empathy Snapshots + Findings",
+  "description": "Produced by the Empathy Builder agent (02c-empathy.json). Evidence-grounded, human-centered view of each participant's experience. Every emotional claim is tied to a specific quote/behavior/timestamp — no invented feelings, no dramatizing.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["empathy_snapshots"],
+  "properties": {
+    "empathy_snapshots": {
+      "type": "array",
+      "minItems": 1,
+      "description": "One empathy snapshot per participant.",
+      "items": {
+        "type": "object",
+        "required": ["participant_id", "empathy_snapshot", "evidence_citations"],
+        "additionalProperties": true,
+        "properties": {
+          "participant_id": { "type": "string" },
+          "empathy_snapshot": { "type": "string", "minLength": 8 },
+          "emotional_journey_moments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "moment": { "type": "string" },
+                "what_happened": { "type": "string" },
+                "participant_reaction": { "type": "string" },
+                "what_it_suggests": { "type": "string" },
+                "timestamp": { "type": "string" }
+              }
+            }
+          },
+          "related_narrative_ids": { "type": "array", "items": { "type": "string" } },
+          "evidence_citations": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Anti-invention anchor: each emotional claim cites a quote/behavior/timestamp.",
+            "items": {
+              "type": "object",
+              "required": ["participant", "timestamp"],
+              "additionalProperties": true,
+              "properties": {
+                "participant": { "type": "string" },
+                "quote": { "type": "string" },
+                "behavior": { "type": "string" },
+                "timestamp": { "type": "string" },
+                "signal_strength": { "type": "string", "enum": ["appeared", "seemed", "described", "showed"] }
+              }
+            }
+          }
+        }
+      }
+    },
+    "empathy_findings": {
+      "type": "array",
+      "description": "Findings reframed into empathy-centered language.",
+      "items": {
+        "type": "object",
+        "required": ["finding_id", "empathy_language"],
+        "additionalProperties": true,
+        "properties": {
+          "finding_id": { "type": "string" },
+          "original_theme": { "type": "string" },
+          "empathy_language": { "type": "string" },
+          "evidence": { "type": "array", "items": { "type": "object", "additionalProperties": true } },
+          "stakeholder_implications": { "type": "string" }
+        }
+      }
+    }
+  }
+}

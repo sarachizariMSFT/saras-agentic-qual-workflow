@@ -1,0 +1,14 @@
+{
+  "study_id": "_pilot",
+  "hashed_at": "2026-07-09T05:47:55.154Z",
+  "inputs": {
+    "inputs/hypotheses.md": "dde83173ed13310a757c7ba8e76e6fa591d0354707b93d72f7a78f8ce7d57042",
+    "inputs/participant-codes.md": "98905c89bfed013297be737b2583d49b1c077b4d1c7564f11c1fbbcbf4848d72",
+    "inputs/private/participant-key.json": "2e6034ef0b944fbbf593aa574e15e7729a3d6e7cfb34e74738b60a2ab5162514",
+    "inputs/private/roster.json": "facd25d59eef68efc345eb533fe273d24d4d849becef0dea911afc372654b1aa",
+    "inputs/transcripts/P01.md": "bbf97899211349d6ad3864d442ade82a3a385286d8873938437bc6cbc0f0b0e4",
+    "inputs/transcripts/P02.md": "54100a7b8633a6244b184d2be1353f05a20be6c99484a08095f67dc7b7eae7aa",
+    "inputs/transcripts/P03.md": "f3fcf69d2e0c919b09c9d85fc0287d6ff477e8939a414c8d97cc9f6e9720a67b",
+    "inputs/transcripts/provenance.json": "8b466ec21ccbd82c008b333c9607b50026b1db982434a29e6e7d98c00bbcb283"
+  }
+}

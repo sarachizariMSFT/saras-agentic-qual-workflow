@@ -1,0 +1,106 @@
+{
+  "model": "gpt-5.5",
+  "run_id": "r-gpt-5.5",
+  "generated_at": "2026-07-09T05:47:56.478Z",
+  "themes": [
+    {
+      "model": "gpt-5.5",
+      "run_id": "r-gpt-5.5",
+      "id": "THEME-001",
+      "type": "theme",
+      "created_by": "synthesizer",
+      "statement": "Participants delegate work but shift to supervising when they cannot see what changed.",
+      "method": "thematic",
+      "method_justification": "Clusters the visibility pain across three participants.",
+      "confidence": "high",
+      "representativeness": "representative",
+      "supporting_participants": [
+        "P01",
+        "P02",
+        "P03"
+      ],
+      "frequency": 3,
+      "related_finding_ids": [
+        "PAIN-001",
+        "BEH-001",
+        "VERB-001"
+      ],
+      "goal_coverage": {
+        "H1": {
+          "verdict": "supported",
+          "supporting": [
+            "THEME-001"
+          ],
+          "refuting": []
+        },
+        "H2": {
+          "verdict": "mixed",
+          "supporting": [
+            "THEME-002"
+          ],
+          "refuting": []
+        },
+        "H3": {
+          "verdict": "supported",
+          "supporting": [
+            "PAIN-002"
+          ],
+          "refuting": []
+        }
+      },
+      "evidence": [
+        {
+          "transcript_id": "P01",
+          "participant": "P01",
+          "locator": "00:02:15",
+          "quote": "I couldn't tell what the agent had changed, so I opened every file to check.",
+          "clip_url": "https://heymarvin.com/clip/P01-000215",
+          "clip_status": "created",
+          "observation_type": "said",
+          "source_type": "transcript_speech"
+        },
+        {
+          "transcript_id": "P02",
+          "participant": "P02",
+          "locator": "00:04:05",
+          "quote": "it said it was done but I didn't trust that until I ran the tests myself.",
+          "clip_url": "https://heymarvin.com/clip/P02-000405",
+          "clip_status": "created",
+          "observation_type": "said",
+          "source_type": "transcript_speech"
+        }
+      ]
+    },
+    {
+      "model": "gpt-5.5",
+      "run_id": "r-gpt-5.5",
+      "id": "THEME-002",
+      "type": "theme",
+      "created_by": "synthesizer",
+      "statement": "A visible plan builds confidence before execution.",
+      "method": "thematic",
+      "method_justification": "Positive expectation expressed by a participant.",
+      "confidence": "medium",
+      "representativeness": "illustrative",
+      "supporting_participants": [
+        "P02"
+      ],
+      "frequency": 1,
+      "related_finding_ids": [
+        "VERB-002"
+      ],
+      "evidence": [
+        {
+          "transcript_id": "P02",
+          "participant": "P02",
+          "locator": "00:15:30",
+          "quote": "I liked that it explained the plan before it started.",
+          "clip_url": "https://heymarvin.com/clip/P02-001530",
+          "clip_status": "created",
+          "observation_type": "said",
+          "source_type": "transcript_speech"
+        }
+      ]
+    }
+  ]
+}

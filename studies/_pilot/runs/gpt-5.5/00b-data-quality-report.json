@@ -1,0 +1,49 @@
+{
+  "quality_report": {
+    "date_generated": "2026-07-08",
+    "transcripts_assessed": 3,
+    "transcripts_ready": 3,
+    "assessments": [
+      {
+        "participant_id": "P01",
+        "file": "P01.md",
+        "duration_minutes": 42,
+        "speaker_labels": "clear",
+        "timestamps": "valid",
+        "audio_quality": "good",
+        "task_context": "clear",
+        "metadata_complete": true,
+        "issues": [],
+        "readiness": "ready",
+        "confidence": "high"
+      },
+      {
+        "participant_id": "P02",
+        "file": "P02.md",
+        "duration_minutes": 38,
+        "speaker_labels": "clear",
+        "timestamps": "valid",
+        "audio_quality": "good",
+        "task_context": "clear",
+        "metadata_complete": true,
+        "issues": [],
+        "readiness": "ready",
+        "confidence": "high"
+      },
+      {
+        "participant_id": "P03",
+        "file": "P03.md",
+        "duration_minutes": 40,
+        "speaker_labels": "clear",
+        "timestamps": "valid",
+        "audio_quality": "good",
+        "task_context": "clear",
+        "metadata_complete": true,
+        "issues": [],
+        "readiness": "ready",
+        "confidence": "high"
+      }
+    ],
+    "readiness_summary": "All 3 transcripts ready for analysis."
+  }
+}

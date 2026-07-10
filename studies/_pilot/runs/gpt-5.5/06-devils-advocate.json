@@ -1,0 +1,27 @@
+{
+  "model": "gpt-5.5",
+  "verdicts": [
+    {
+      "checker": "devils-advocate",
+      "finding_id": "PAIN-001",
+      "verdict": "holds",
+      "validity_threat": "small sample",
+      "alternative_explanations": [
+        "general AI skepticism"
+      ],
+      "rationale": "Behavior (manual verification) corroborates the self-report.",
+      "human_audit": "pending"
+    },
+    {
+      "checker": "devils-advocate",
+      "finding_id": "THEME-002",
+      "verdict": "weak",
+      "validity_threat": "single participant",
+      "alternative_explanations": [
+        "personal preference"
+      ],
+      "rationale": "Only P02 expressed this; keep as illustrative.",
+      "human_audit": "pending"
+    }
+  ]
+}

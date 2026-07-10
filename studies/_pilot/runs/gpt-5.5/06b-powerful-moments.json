@@ -1,0 +1,66 @@
+[
+  {
+    "model": "gpt-5.5",
+    "run_id": "r-gpt-5.5",
+    "id": "MOM-001",
+    "type": "powerful_moment",
+    "statement": "Seeing the diff turned confusion into relief.",
+    "method": "thematic",
+    "method_justification": "A memorable emotional peak worth a clip.",
+    "confidence": "high",
+    "emotion": "relief",
+    "intensity": 4,
+    "clip_worthy": true,
+    "representativeness": "illustrative",
+    "evidence_mode": "participant_self_report",
+    "supporting_participants": [
+      "P03"
+    ],
+    "frequency": 1,
+    "created_by": "powerful-moments",
+    "evidence": [
+      {
+        "transcript_id": "P03",
+        "participant": "P03",
+        "locator": "00:11:10",
+        "quote": "the diff view finally showed me what happened and I relaxed.",
+        "clip_url": "https://heymarvin.com/clip/P03-001110",
+        "clip_status": "created",
+        "observation_type": "said",
+        "source_type": "transcript_speech"
+      }
+    ]
+  },
+  {
+    "model": "gpt-5.5",
+    "run_id": "r-gpt-5.5",
+    "id": "MOM-002",
+    "type": "powerful_moment",
+    "statement": "The babysitting comment captured the felt cost of low visibility.",
+    "method": "thematic",
+    "method_justification": "Vivid participant language that names the burden.",
+    "confidence": "high",
+    "emotion": "frustration",
+    "intensity": 4,
+    "clip_worthy": true,
+    "representativeness": "illustrative",
+    "evidence_mode": "participant_self_report",
+    "supporting_participants": [
+      "P01"
+    ],
+    "frequency": 1,
+    "created_by": "powerful-moments",
+    "evidence": [
+      {
+        "transcript_id": "P01",
+        "participant": "P01",
+        "locator": "00:09:40",
+        "quote": "honestly I ended up babysitting it the whole time.",
+        "clip_url": "https://heymarvin.com/clip/P01-000940",
+        "clip_status": "created",
+        "observation_type": "said",
+        "source_type": "transcript_speech"
+      }
+    ]
+  }
+]

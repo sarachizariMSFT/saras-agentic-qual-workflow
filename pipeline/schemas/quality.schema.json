@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/quality.schema.json",
+  "title": "Data Quality Report",
+  "description": "Produced by the Data Integrity agent (00b-data-quality-report.json). One assessment per transcript plus a CP1 readiness summary. Non-eval contract: documents transcript readiness before analysis begins.",
+  "type": "object",
+  "required": ["quality_report"],
+  "additionalProperties": true,
+  "properties": {
+    "quality_report": {
+      "type": "object",
+      "required": ["assessments"],
+      "additionalProperties": true,
+      "properties": {
+        "date_generated": { "type": "string" },
+        "transcripts_assessed": { "type": "integer", "minimum": 0 },
+        "transcripts_ready": { "type": "integer", "minimum": 0 },
+        "assessments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["participant_id", "readiness"],
+            "additionalProperties": true,
+            "properties": {
+              "participant_id": { "type": "string" },
+              "file": { "type": "string" },
+              "duration_minutes": { "type": "number", "minimum": 0 },
+              "speaker_labels": { "type": "string" },
+              "timestamps": { "type": "string" },
+              "audio_quality": { "type": "string" },
+              "task_context": { "type": "string" },
+              "metadata_complete": { "type": "boolean" },
+              "readiness": {
+                "type": "string",
+                "enum": ["ready", "ready_with_caveats", "not_ready"]
+              },
+              "confidence": { "type": "string", "enum": ["low", "medium", "high"] },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["type", "severity", "description"],
+                  "additionalProperties": true,
+                  "properties": {
+                    "type": { "type": "string" },
+                    "severity": { "type": "string", "enum": ["blocker", "warning", "note"] },
+                    "description": { "type": "string", "minLength": 3 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "readiness_summary": { "type": "string" }
+      }
+    }
+  }
+}

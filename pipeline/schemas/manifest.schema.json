@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://uxr.local/schemas/manifest.schema.json",
+  "title": "Run Manifest",
+  "description": "One manifest per model run. Makes every run reproducible and auditable.",
+  "type": "object",
+  "required": ["run_id", "study_id", "model", "created_at", "inputs", "steps"],
+  "additionalProperties": true,
+  "properties": {
+    "run_id": { "type": "string" },
+    "study_id": { "type": "string" },
+    "model": { "type": "string", "enum": ["opus-4.8", "gpt-5.5"] },
+    "pipeline_version": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "inputs": {
+      "type": "object",
+      "description": "Hashes of every intake artifact so runs can be compared on identical inputs.",
+      "additionalProperties": { "type": "string" }
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "version"],
+        "properties": {
+          "name": { "type": "string" },
+          "version": { "type": "string" }
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "agent", "status", "output"],
+        "properties": {
+          "step": { "type": "string" },
+          "agent": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "done", "failed", "blocked", "awaiting_human"]
+          },
+          "output": { "type": "string", "description": "Relative path to the step output file." },
+          "evals": {
+            "type": "object",
+            "additionalProperties": { "type": ["number", "string", "boolean"] }
+          },
+          "started_at": { "type": "string" },
+          "ended_at": { "type": "string" }
+        }
+      }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["human", "automated"] },
+          "status": { "type": "string", "enum": ["pending", "passed", "rejected", "changes_requested"] },
+          "reviewer": { "type": "string" },
+          "notes": { "type": "string" },
+          "decided_at": { "type": "string" }
+        }
+      }
+    }
+  }
+}

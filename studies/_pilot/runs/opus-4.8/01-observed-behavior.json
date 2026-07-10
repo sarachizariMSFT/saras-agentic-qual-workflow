@@ -1,0 +1,54 @@
+[
+  {
+    "model": "opus-4.8",
+    "run_id": "r-opus-4.8",
+    "id": "BEH-001",
+    "type": "behavioral_evidence",
+    "statement": "Participant manually reopened files to reconstruct what the agent changed.",
+    "method": "thematic",
+    "method_justification": "Directly observed behavior in the session recording.",
+    "confidence": "high",
+    "evidence_mode": "observed_behavior",
+    "supporting_participants": [
+      "P01"
+    ],
+    "frequency": 1,
+    "created_by": "observed-behavior",
+    "evidence": [
+      {
+        "transcript_id": "P01",
+        "participant": "P01",
+        "locator": "00:02:15",
+        "quote": "I couldn't tell what the agent had changed, so I opened every file to check.",
+        "observation_type": "did",
+        "source_type": "video_observed_behavior"
+      }
+    ]
+  },
+  {
+    "model": "opus-4.8",
+    "run_id": "r-opus-4.8",
+    "id": "BEH-002",
+    "type": "behavioral_evidence",
+    "statement": "Participant abandoned the agent and completed the task by hand.",
+    "method": "thematic",
+    "method_justification": "Observed fallback behavior under uncertainty.",
+    "confidence": "high",
+    "evidence_mode": "observed_behavior",
+    "supporting_participants": [
+      "P03"
+    ],
+    "frequency": 1,
+    "created_by": "observed-behavior",
+    "evidence": [
+      {
+        "transcript_id": "P03",
+        "participant": "P03",
+        "locator": "00:06:20",
+        "quote": "I gave up waiting and just wrote the function by hand.",
+        "observation_type": "did",
+        "source_type": "video_observed_behavior"
+      }
+    ]
+  }
+]

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UXR Analysis Pipeline — How &amp; Why It Works</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#eef2ff',
+      primaryBorderColor: '#6366f1',
+      primaryTextColor: '#1e1b4b',
+      lineColor: '#94a3b8',
+      fontFamily: 'Segoe UI, system-ui, sans-serif',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', useMaxWidth: true }
+  });
+</script>
+<style>
+  :root{
+    --bg:#f7f8fb; --panel:#ffffff; --ink:#1f2430; --muted:#5b6472;
+    --line:#e5e8ef; --brand:#6366f1; --brand-2:#0ea5e9;
+    --green:#16a34a; --amber:#d97706; --red:#dc2626; --violet:#7c3aed;
+    --code-bg:#0f172a; --code-ink:#e2e8f0;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.10);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+    line-height:1.6; font-size:16px;
+  }
+  a{color:var(--brand); text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{display:grid; grid-template-columns:270px 1fr; max-width:1400px; margin:0 auto}
+
+  /* Sidebar */
+  aside{
+    position:sticky; top:0; align-self:start; height:100vh; overflow-y:auto;
+    padding:24px 18px; border-right:1px solid var(--line); background:var(--panel);
+  }
+  aside .brand{font-weight:700; font-size:15px; letter-spacing:.02em; color:var(--ink)}
+  aside .ver{display:inline-block; margin-top:4px; font-size:11px; color:#fff;
+    background:var(--brand); padding:1px 8px; border-radius:999px}
+  aside nav{margin-top:20px}
+  aside nav a{display:block; padding:6px 10px; color:var(--muted); font-size:13.5px;
+    border-radius:8px; margin-bottom:2px}
+  aside nav a:hover{background:#f1f3f9; color:var(--ink); text-decoration:none}
+  aside nav .grp{margin:14px 0 4px; font-size:11px; text-transform:uppercase;
+    letter-spacing:.08em; color:#9aa3b2; font-weight:700; padding:0 10px}
+
+  /* Main */
+  main{padding:40px 48px 120px; max-width:960px}
+  header.hero{margin-bottom:8px}
+  header.hero h1{font-size:34px; line-height:1.15; margin:0 0 8px}
+  header.hero p.sub{font-size:18px; color:var(--muted); margin:0 0 4px}
+  .pillrow{margin:18px 0 8px; display:flex; flex-wrap:wrap; gap:8px}
+  .pill{font-size:12.5px; padding:4px 12px; border-radius:999px; border:1px solid var(--line);
+    background:#fff; color:var(--muted)}
+  .pill b{color:var(--ink)}
+
+  section{margin-top:52px; scroll-margin-top:20px}
+  h2{font-size:25px; margin:0 0 6px; padding-bottom:8px; border-bottom:2px solid var(--line)}
+  h2 .n{color:var(--brand); font-weight:800; margin-right:10px}
+  h3{font-size:18px; margin:26px 0 8px}
+  p{margin:10px 0}
+  .lead{font-size:17px; color:#33404f}
+
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:20px 22px; box-shadow:var(--shadow); margin:16px 0}
+  .why{border-left:4px solid var(--brand); background:#f6f7ff; border-radius:0 12px 12px 0;
+    padding:14px 18px; margin:14px 0}
+  .why b{color:var(--violet)}
+  .note{border-left:4px solid var(--brand-2); background:#eff9ff; border-radius:0 12px 12px 0;
+    padding:12px 16px; margin:14px 0; font-size:14.5px; color:#264653}
+
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14px; background:#fff;
+    border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  th,td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--line); vertical-align:top}
+  th{background:#f3f5fa; font-size:12.5px; text-transform:uppercase; letter-spacing:.03em; color:#586074}
+  tr:last-child td{border-bottom:none}
+  td code, p code, li code{background:#eef1f7; color:#3b3f7a; padding:1px 6px; border-radius:6px;
+    font-size:12.5px; font-family:"Cascadia Code",Consolas,monospace}
+
+  .tag{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px}
+  .t-hard{background:#fdecec; color:var(--red)}
+  .t-soft{background:#fef3e2; color:var(--amber)}
+  .t-par{background:#e8f7ee; color:var(--green)}
+  .t-seq{background:#eef2ff; color:var(--brand)}
+
+  .mermaid{background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px;
+    margin:18px 0; text-align:center; box-shadow:var(--shadow)}
+
+  pre{background:var(--code-bg); color:var(--code-ink); padding:16px 18px; border-radius:12px;
+    overflow-x:auto; font-size:13px; line-height:1.55; font-family:"Cascadia Code",Consolas,monospace}
+  pre .c{color:#7d8aa5}
+
+  ol.steps{counter-reset:s; list-style:none; padding-left:0}
+  ol.steps>li{position:relative; padding:8px 0 8px 42px; margin:2px 0; border-bottom:1px dashed var(--line)}
+  ol.steps>li:last-child{border-bottom:none}
+  ol.steps>li::before{counter-increment:s; content:counter(s); position:absolute; left:0; top:8px;
+    width:28px; height:28px; background:var(--brand); color:#fff; border-radius:50%;
+    display:grid; place-items:center; font-size:13px; font-weight:700}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  .kicker{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--brand); font-weight:700}
+  footer{margin-top:60px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:13px}
+  .cpbadge{display:inline-block; background:#1e1b4b; color:#fff; font-size:11px; font-weight:700;
+    padding:2px 9px; border-radius:6px; margin-right:6px}
+  .anchor-h2{display:flex; align-items:baseline; justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ========== SIDEBAR ========== -->
+<aside>
+  <div class="brand">UXR Analysis Pipeline</div>
+  <div class="ver">v0.3.0 · explained</div>
+  <nav>
+    <div class="grp">Start here</div>
+    <a href="#tldr">TL;DR — one paragraph</a>
+    <a href="#problem">The problem we solved</a>
+    <a href="#principles">6 design principles</a>
+    <div class="grp">The design</div>
+    <a href="#bigpicture">Big picture flowchart</a>
+    <a href="#team">The agent team</a>
+    <a href="#topology">Why parallel + sequential</a>
+    <a href="#skills">Skills vs. agents vs. engine</a>
+    <div class="grp">Trust &amp; safety</div>
+    <a href="#evals">Evals — the gates</a>
+    <a href="#checkpoints">Human checkpoints</a>
+    <a href="#loops">Loops (capped at 10)</a>
+    <a href="#evidence">Evidence &amp; clips</a>
+    <a href="#privacy">Privacy / PII</a>
+    <a href="#risk">Risk flagging</a>
+    <div class="grp">Rigor</div>
+    <a href="#dualmodel">Dual-model comparison</a>
+    <a href="#saturation">Saturation check</a>
+    <a href="#context">Context hygiene</a>
+    <a href="#ceremonies">Ceremonies</a>
+    <a href="#learning">The learning loop</a>
+    <div class="grp">Reference</div>
+    <a href="#files">Files &amp; where things live</a>
+    <a href="#run">How to run it</a>
+    <a href="#decisions">Decision log</a>
+  </nav>
+</aside>
+
+<!-- ========== MAIN ========== -->
+<main>
+
+<header class="hero">
+  <div class="kicker">Design walkthrough</div>
+  <h1>How the UXR Analysis Pipeline works — and why we built it this way</h1>
+  <p class="sub">A traceable, eval-gated, multi-agent system that turns raw interview transcripts into
+    findings, a report, and a story — with a person in the loop at every decision that matters.</p>
+  <div class="pillrow">
+    <span class="pill"><b>22</b> specialist agents</span>
+    <span class="pill"><b>16</b> skills</span>
+    <span class="pill"><b>13</b> automated evals</span>
+    <span class="pill"><b>3</b> human checkpoints</span>
+    <span class="pill"><b>2</b> models compared</span>
+    <span class="pill">loops capped at <b>10</b></span>
+    <span class="pill">zero-dependency Node engine</span>
+  </div>
+</header>
+
+<!-- TLDR -->
+<section id="tldr">
+  <div class="card">
+    <span class="kicker">TL;DR</span>
+    <p class="lead" style="margin-top:6px">
+      You hand the pipeline your research goals, hypotheses, and Marvin transcripts. A team of AI
+      specialists reads the transcripts <b>directly</b> — one hunts behaviors, one pain points, one
+      papercuts, one powerful moments, one quotes, one design fixes. A red-team agent tries to break
+      every finding before a synthesizer weaves the survivors into themes. Automated gates check every
+      claim traces to an <b>exact, timestamped, video-clipped quote</b>, that nobody's real name leaks,
+      and that we didn't overclaim from a thin sample. You approve at three checkpoints via an HTML
+      dashboard. The whole thing runs twice — once on <b>Opus&nbsp;4.8</b>, once on <b>GPT-5.5</b> — and we
+      diff the two. Every correction you make feeds a <b>learning loop</b> that permanently improves the
+      agents. Nothing grinds forever: every loop stops at 10 and asks a human.
+    </p>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <h2><span class="n">01</span>The problem we set out to solve</h2>
+  <p class="lead">Qualitative analysis done by hand is slow, and qualitative analysis done by a single
+    LLM is <em>fast but untrustworthy</em>. We wanted the speed without giving up the things a good
+    researcher refuses to compromise on.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">What breaks with a naive "summarize my transcripts" prompt</h3>
+      <ul>
+        <li><b>Hallucinated quotes</b> — the model invents plausible-sounding verbatims.</li>
+        <li><b>Cross-contamination</b> — one participant's words get attributed to another.</li>
+        <li><b>Overclaiming</b> — "users want X" from a single session.</li>
+        <li><b>No traceability</b> — you can't get from a claim back to the moment it came from.</li>
+        <li><b>PII leaks</b> — real names and companies end up in a shareable deck.</li>
+        <li><b>Black box</b> — no way to see <em>where</em> in the process something went wrong.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">What we insisted on instead</h3>
+      <ul>
+        <li>Every claim → an <b>exact quote + timestamp + video clip</b>.</li>
+        <li>Grounding scoped to the <b>cited speaker's own turns</b>.</li>
+        <li>Frequency claims can't exceed the number of people who actually said it.</li>
+        <li><b>De-identification</b> at intake; a leak check over <em>every</em> file.</li>
+        <li><b>Human sign-off</b> at intake, after synthesis, and before publishing.</li>
+        <li>Full <b>traceability &amp; observability</b> — each step is its own file + dashboard.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="why"><b>Why a team of agents and not one big prompt?</b> Analysis quality goes up when
+    each lens has a single, narrow job and a charter that says exactly what "good" looks like. A pain-points
+    specialist that <em>only</em> hunts pain reasons more carefully than a generalist juggling six goals at
+    once. It also makes the system <em>observable</em>: when something's off, you know which agent and which
+    step to inspect, because each one writes its own file.</p>
+</section>
+
+<!-- PRINCIPLES -->
+<section id="principles">
+  <h2><span class="n">02</span>The six principles everything else follows from</h2>
+  <p>Every design decision below traces back to one of these. When two approaches competed, the one that
+    served these principles won.</p>
+  <table>
+    <tr><th>Principle</th><th>What it means in practice</th></tr>
+    <tr><td><b>1. Traceability</b></td><td>Every claim links back to an exact quote, a timestamp, and a Marvin clip. No orphan assertions.</td></tr>
+    <tr><td><b>2. Accuracy over fluency</b></td><td>Hard gates block hallucinated or inflated claims even if the prose reads beautifully.</td></tr>
+    <tr><td><b>3. Observability</b></td><td>Each step is its own file; each checkpoint is an HTML dashboard. You can always see where we are and why.</td></tr>
+    <tr><td><b>4. Human authority</b></td><td>The machine drafts and gates; a person approves. Three checkpoints, plus risk flags that can hold sign-off.</td></tr>
+    <tr><td><b>5. Bounded autonomy</b></td><td>Loops are explicit and capped at 10. Nothing runs away; a stuck step surfaces to a human.</td></tr>
+    <tr><td><b>6. Self-improvement</b></td><td>Every correction becomes a durable fix to an agent, skill, or rubric — never a one-off patch.</td></tr>
+  </table>
+</section>
+
+<!-- BIG PICTURE -->
+<section id="bigpicture">
+  <div class="anchor-h2"><h2><span class="n">03</span>The big picture</h2></div>
+  <p class="lead">Here's the whole flow, end to end. Blue diamonds are the moments a human takes over.
+    Everything to the left of a checkpoint stops and waits for approval.</p>
+
+  <div class="mermaid">
+flowchart TD
+    A[Intake<br/>goals · hypotheses · transcripts · notes · style samples] --> B[Privacy<br/>assign opaque codes P01, P02…<br/>redact names/companies]
+    B --> C[Provenance gate<br/>sha256 + speaker labels + timestamps]
+    C --> CP1{{Human CP1<br/>inputs correct?}}
+    CP1 --> K[Kickoff ceremony<br/>state biases · brainstorm falsifiers]
+    K --> P[["PARALLEL producers"]]
+
+    P --> P1[Observed-Behavior]
+    P --> P2[Verbatim]
+    P --> P3[Pain Points]
+    P --> P4[Papercuts]
+    P --> P5[Design Recs]
+    P --> P6[Powerful Moments]
+
+    P1 & P2 & P3 & P4 & P5 & P6 --> QA1[QA / Evals<br/>hard gates per step]
+    QA1 --> DA[Devil's Advocate<br/>red-team every finding]
+    DA --> SYN[Synthesizer<br/>themes · hypothesis verdicts]
+    SYN --> QA2[QA / Evals<br/>synthesis gate]
+    QA2 --> SAT[Saturation artifact<br/>sample adequacy]
+    SAT --> CP2{{Human CP2<br/>themes + saturation OK?}}
+
+    CP2 --> EV[Evidence-Verifier<br/>exact quote + timestamp + Marvin clip]
+    EV --> RF[Risk-Flagger<br/>raise risky arguments]
+    RF --> R[["PARALLEL reporting"]]
+    R --> ED[Editor → report]
+    R --> ST[Storyteller → story + reel]
+    ED & ST --> PII[Privacy PII gate<br/>scan every artifact]
+    PII --> QA3[QA / Evals<br/>final gate]
+    QA3 --> CP3{{Human CP3<br/>sign-off}}
+    CP3 --> RETRO[Retrospective ceremony<br/>→ learning loop]
+
+    classDef human fill:#1e1b4b,stroke:#1e1b4b,color:#fff;
+    classDef gate fill:#fdecec,stroke:#dc2626,color:#7f1d1d;
+    classDef par fill:#e8f7ee,stroke:#16a34a,color:#14532d;
+    class CP1,CP2,CP3 human;
+    class QA1,QA2,QA3,PII,C gate;
+    class P,R par;
+  </div>
+
+  <div class="note"><b>Read it like this:</b> intake &amp; de-identify → gate → <span class="cpbadge">CP1</span>
+    → six analysts work at once → challenge → synthesize → gate → <span class="cpbadge">CP2</span> →
+    verify evidence → flag risks → write report + story in parallel → leak-check → gate →
+    <span class="cpbadge">CP3</span> → learn. Then the entire path runs a <b>second time</b> on the other model.</p>
+</section>
+
+<!-- TEAM -->
+<section id="team">
+  <h2><span class="n">04</span>The agent team — who does what, and why each exists</h2>
+  <p class="lead">We aimed for the <b>optimal</b> number of agents: enough that each has a single sharp
+    job, not so many that they trip over each other. Twenty-two specialists, grouped by phase.</p>
+
+  <h3>Orchestration &amp; safety</h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why it's separate</th></tr>
+    <tr><td><b>Conductor</b></td><td>Routes work, enforces gates, records status, runs both models.</td><td>Someone has to own the run and the checkpoints. Keeping it out of the analysts keeps them focused.</td></tr>
+    <tr><td><b>Privacy</b></td><td>Assigns opaque codes (P01…), redacts, blocks name/company leaks.</td><td>De-identification is a safety function, not an analysis one — it must gate independently and fail closed.</td></tr>
+  </table>
+
+  <h3>Preparation &amp; grounding <span class="tag t-seq">sequential</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why it's separate</th></tr>
+    <tr><td><b>Data Integrity</b></td><td>Cleans transcripts, checks speaker labels/timestamps/audio, flags gaps, certifies readiness.</td><td>Bad qualitative analysis starts with messy data. Quality is a gate, not an afterthought.</td></tr>
+    <tr><td><b>Participant Narrative</b></td><td>One structured case summary per person — goals, expectations, breakdowns, emotional arc — <em>before</em> synthesis flattens them.</td><td>Preserves each person's story so the team doesn't abstract into themes prematurely.</td></tr>
+  </table>
+
+  <h3>Coding &amp; evidence — the parallel pair <span class="tag t-par">parallel</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why it's separate</th></tr>
+    <tr><td><b>Open Coding</b></td><td>Bottom-up descriptive codes straight from the data — no pre-existing framework.</td><td>Protects the inductive process. Lets the data speak before anyone jumps to polished themes.</td></tr>
+    <tr><td><b>Evidence Extraction</b></td><td>Builds the centralized evidence bank (quotes, behaviors, contradictions, confidence) that every later agent cites.</td><td>A finding is only as strong as its evidence. One owner keeps the analysis from becoming vibes.</td></tr>
+  </table>
+
+  <h3>Experience <span class="tag t-seq">sequential</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why it's separate</th></tr>
+    <tr><td><b>Empathy Builder</b></td><td>Translates the evidence into stakeholder-readable empathy — participant snapshots, emotional-journey maps, empathy prompts — grounded in exact quotes, never invented or dramatized.</td><td>Empathy ≠ storytelling. It makes the analysis <em>more human</em> without becoming less rigorous; its claims are red-teamed like any finding.</td></tr>
+  </table>
+
+  <h3>Analysis — the six parallel lenses <span class="tag t-par">parallel</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Hunts for</th></tr>
+    <tr><td><b>Observed-Behavior</b></td><td>What people actually <em>did</em> — task outcomes, workarounds, behavioral evidence (not opinions).</td></tr>
+    <tr><td><b>Verbatim</b></td><td>Representative quotes — the true voice of the customer, attributed and timestamped.</td></tr>
+    <tr><td><b>Pain Points</b></td><td>Meaningful pain and blockers, severity-scored.</td></tr>
+    <tr><td><b>Papercuts</b></td><td>Small cumulative friction — the quick wins that add up.</td></tr>
+    <tr><td><b>Design Recommendations</b></td><td>Evidence-backed fixes, prioritized against findings.</td></tr>
+    <tr><td><b>Powerful-Moments</b></td><td>Emotional peaks, memorable moments, powerful stories — the clip-worthy highlights.</td></tr>
+  </table>
+  <div class="why"><b>Why these six specifically?</b> They map to the distinct products a researcher actually
+    ships: evidence, voice, problems (big and small), solutions, and the human moments that make a readout
+    land. Pain vs. papercut is a deliberate split — conflating "this blocked me" with "this annoyed me"
+    is one of the most common analysis errors, so each gets its own owner and its own severity rubric.</p>
+
+  <h3>Challenge &amp; synthesis <span class="tag t-seq">sequential</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why it runs alone, in order</th></tr>
+    <tr><td><b>Devil's Advocate</b></td><td>Red-teams every finding <em>and empathy claim</em>: <code>holds / weak / unsupported</code>, plus 2–3 competing explanations.</td><td>You can't challenge findings until they exist. It needs the full set to spot sampling bias &amp; contradictions.</td></tr>
+    <tr><td><b>Mental Model</b></td><td>Maps what users <em>assumed</em> vs. how the system actually works; diagnoses the root cause behind friction.</td><td>A lot of AI-product friction is model mismatch, not usability. Different root, different fix — so it gets its own pass.</td></tr>
+    <tr><td><b>Synthesizer</b></td><td>Themes, hypothesis verdicts, participant-aware prioritization — only over surviving findings.</td><td>Synthesis is inherently holistic; it must see everything that passed the challenge.</td></tr>
+  </table>
+
+  <h3>Implications <span class="tag t-seq">sequential</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why it's separate</th></tr>
+    <tr><td><b>Product Implication</b></td><td>Translates surviving findings into design principles, opportunity areas, risks, and future research questions.</td><td>Keeps analysis tied to real product decisions — and keeps that leap explicit rather than smuggled into a finding.</td></tr>
+  </table>
+
+  <h3>Gating <span class="tag t-hard">hard gates</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th></tr>
+    <tr><td><b>QA / Evals</b></td><td>Runs the automated eval suite after each step — schema, traceability, hallucination, frequency integrity, coverage.</td></tr>
+    <tr><td><b>Evidence-Verifier</b></td><td>Proves every claim has an exact, timestamped, clip-linked quote; drives Marvin to cut the clip.</td></tr>
+    <tr><td><b>Risk-Flagger</b></td><td>Raises risky arguments for human review (overreach, causal claims, sensitive topics). Not a block — a flag.</td></tr>
+  </table>
+
+  <h3>Reporting <span class="tag t-par">parallel</span></h3>
+  <table>
+    <tr><th>Agent</th><th>Job</th><th>Why two writers?</th></tr>
+    <tr><td><b>Editor</b></td><td>The factual report, in the researcher's own voice (learned from style samples).</td><td rowspan="2">A report and a narrative serve different audiences. They write in parallel, then reconcile so they never contradict.</td></tr>
+    <tr><td><b>Storyteller</b></td><td>Narrative arc, personas/journeys, and a highlight reel from the powerful moments.</td></tr>
+  </table>
+  <p style="color:var(--muted);font-size:14px">A background <b>Scribe</b> logs sessions automatically — it never needs routing and never blocks.</p>
+</section>
+
+<!-- TOPOLOGY -->
+<section id="topology">
+  <h2><span class="n">05</span>Why parallel <em>and</em> sequential — the hybrid topology</h2>
+  <p class="lead">The single biggest orchestration decision: <b>which agents run at once, and which must wait.</b>
+    We chose a hybrid because the work genuinely has both shapes.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0"><span class="tag t-par">parallel</span> when work is independent</h3>
+      <p>Two parallel bursts. First, <b>evidence extraction</b> and <b>open coding</b> both read the raw
+        transcripts and neither needs the other. Then the <b>six analysis lenses</b> run together — pain
+        points don't need papercuts to finish first. Running each burst concurrently is faster <em>and</em>
+        keeps each agent's context small. Same for the two writers at the end.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0"><span class="tag t-seq">sequential</span> when work depends on a whole</h3>
+      <p>You can't challenge findings before they exist, can't map mental models against challenged
+        findings until the challenge runs, can't synthesize before that, and can't verify evidence before
+        synthesis picks the survivors. These stages need everything upstream, so they run one after another.</p>
+    </div>
+  </div>
+
+  <div class="mermaid">
+flowchart LR
+    subgraph prep [" Sequential: data readiness "]
+      direction TB
+      d1[Data Integrity] --> d2[Participant Narrative]
+    end
+    subgraph par0 [" Parallel: extract "]
+      direction TB
+      e1[Evidence Extraction] ~~~ e2[Open Coding]
+    end
+    emp[Empathy Builder]
+    subgraph par1 [" Parallel: analysis "]
+      direction TB
+      a1[Observed-Behavior] ~~~ a2[Verbatim] ~~~ a3[Pain Points]
+      a4[Papercuts] ~~~ a5[Design Recs] ~~~ a6[Powerful Moments]
+    end
+    subgraph seq [" Sequential: challenge → mental models → synthesis → verify → flag → implications "]
+      direction LR
+      s1[Devil's Advocate] --> s5[Mental Model] --> s2[Synthesizer] --> s3[Evidence-Verifier] --> s4[Risk-Flagger] --> s6[Product Implication]
+    end
+    subgraph par2 [" Parallel: reporting "]
+      direction TB
+      r1[Editor] ~~~ r2[Storyteller]
+    end
+    prep --> par0 --> emp --> par1 --> seq --> par2
+    classDef p fill:#e8f7ee,stroke:#16a34a,color:#14532d;
+    classDef s fill:#eef2ff,stroke:#6366f1,color:#1e1b4b;
+    class e1,e2,a1,a2,a3,a4,a5,a6,r1,r2 p;
+    class d1,d2,emp,s1,s2,s3,s4,s5,s6 s;
+  </div>
+
+  <div class="why"><b>Why not just run everything in parallel to be fast?</b> Because correctness depends on
+    order. Synthesis over un-challenged findings would bake in weak claims; verifying evidence before
+    synthesis picks survivors would waste effort clipping quotes we're about to drop. The hybrid gets
+    parallel speed where it's safe and sequential rigor where it's required.</p>
+
+  <div class="note"><b>There's a third axis of parallelism: the whole pipeline runs twice.</b> Everything
+    above executes once on <b>Opus&nbsp;4.8</b> and once on <b>GPT-5.5</b> — a "meta-parallel" across
+    models that we diff afterward. See <a href="#dualmodel">Dual-model comparison</a>.</div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+  <h2><span class="n">06</span>Three layers: agents, skills, and the engine</h2>
+  <p class="lead">People often ask why there are both "skills" and "agents" and a bunch of <code>.mjs</code>
+    files. Each layer answers a different question.</p>
+  <table>
+    <tr><th>Layer</th><th>Answers</th><th>Lives in</th><th>Example</th></tr>
+    <tr><td><b>Agent charter</b></td><td><em>Who</em> does the work and how they should think.</td><td><code>.squad/agents/&lt;name&gt;/charter.md</code></td><td>Pain-Points' rubric &amp; boundaries</td></tr>
+    <tr><td><b>Skill</b></td><td><em>How</em> to perform a reusable technique, shareable across agents.</td><td><code>.squad/skills/&lt;name&gt;/SKILL.md</code></td><td><code>severity-scoring</code>, <code>storytelling-method</code></td></tr>
+    <tr><td><b>Engine module</b></td><td>The <em>deterministic</em> checks a model must not be trusted to do by vibes.</td><td><code>pipeline/lib/*.mjs</code></td><td><code>evals.mjs</code>, <code>pii.mjs</code></td></tr>
+  </table>
+  <div class="why"><b>Why push gates into code instead of prompts?</b> A model asked "did every quote appear
+    verbatim?" will sometimes say yes when it shouldn't. The same check in <code>evals.mjs</code> — a
+    contiguous longest-run substring match scoped to the cited speaker — gives the <em>same answer every
+    time</em>. Determinism is what makes the gates trustworthy and the runs reproducible. Skills and charters
+    guide judgment; the engine enforces facts.</p>
+  <p><b>The 16 skills</b> at a glance: <code>uxr-intake</code>, <code>marvin-transcript-access</code>,
+    <code>pii-redaction</code>, <code>evidence-coding</code>, <code>severity-scoring</code>,
+    <code>powerful-moments-detection</code>, <code>synthesis-method</code>, <code>devils-advocate-method</code>,
+    <code>evidence-verification</code>, <code>eval-rubrics</code>, <code>traceability-contract</code>,
+    <code>risk-flagging</code>, <code>storytelling-method</code>, <code>humanizer</code>,
+    <code>learning-loop</code>, <code>pipeline-orchestration</code>.</p>
+</section>
+
+<!-- EVALS -->
+<section id="evals">
+  <h2><span class="n">07</span>Evals — the gates that make output trustworthy</h2>
+  <p class="lead"><code>lib/evals.mjs</code> runs a deterministic suite after each step.
+    <span class="tag t-hard">hard</span> gates <b>block</b> and force a revision loop.
+    <span class="tag t-soft">soft</span> gates <b>flag</b> for the human but don't stop the run.</p>
+  <table>
+    <tr><th>Eval</th><th>Gate</th><th>Passes when…</th></tr>
+    <tr><td>schema</td><td><span class="tag t-hard">hard</span></td><td>every finding validates the schema (<code>observation_type</code> required; <code>source_type</code> on evidence).</td></tr>
+    <tr><td>traceability</td><td><span class="tag t-hard">hard</span></td><td>every finding has ≥1 evidence citation with a locator.</td></tr>
+    <tr><td>hallucination</td><td><span class="tag t-hard">hard</span></td><td>every quote matches via <b>contiguous longest-run</b> in the <b>cited speaker's</b> turns.</td></tr>
+    <tr><td>frequency_integrity</td><td><span class="tag t-hard">hard</span></td><td>authored <code>frequency</code> never exceeds the distinct count of people who said it.</td></tr>
+    <tr><td>method_justification</td><td><span class="tag t-hard">hard</span></td><td>every finding justifies its method.</td></tr>
+    <tr><td>quote_exactness</td><td><span class="tag t-hard">hard</span></td><td>every participant quote is an exact verbatim substring of its transcript.</td></tr>
+    <tr><td>quote_timestamp</td><td><span class="tag t-hard">hard</span></td><td>every quote carries a timestamp locator (<code>hh:mm:ss</code> / <code>mm:ss</code>).</td></tr>
+    <tr><td>clip_link</td><td><span class="tag t-hard">hard</span></td><td>every quote has a Marvin <code>clip_url</code> (pending accepted only when configured).</td></tr>
+    <tr><td>pii_leak</td><td><span class="tag t-hard">hard</span></td><td><b>no real name or company</b> appears in any run artifact.</td></tr>
+    <tr><td>coverage</td><td><span class="tag t-soft">soft</span></td><td>every hypothesis maps to ≥1 finding — <b>refuted &amp; insufficient verdicts count too</b>.</td></tr>
+    <tr><td>causal_support</td><td><span class="tag t-soft">soft</span></td><td>causal claims lacking behavioral evidence get flagged for review.</td></tr>
+    <tr><td>calibration</td><td><span class="tag t-soft">soft</span></td><td>severity isn't inflated (&gt;60% at level 5 flags).</td></tr>
+    <tr><td>recommendation_link</td><td><span class="tag t-soft">soft</span></td><td>every recommendation links to a finding.</td></tr>
+  </table>
+
+  <div class="why"><b>Two subtle decisions worth calling out.</b>
+    <br/>• <b>Speaker-scoped hallucination.</b> A quote is only "real" if it appears in the <em>cited
+    speaker's own turns</em> — not just somewhere in the transcript. This kills the classic error of
+    attributing P07's words to P01.
+    <br/>• <b>Disconfirmation is rewarded.</b> A hypothesis that comes back <em>refuted</em> still counts as
+    covered. We never want the pipeline to feel pressure to "find support" — killing a wrong hypothesis is
+    a win, and the coverage rule encodes that.</p>
+
+  <div class="note"><b>Gates are non-optional by construction.</b> <code>lib/conduct.mjs</code> enforces that a
+    step only reaches <code>done</code> by going through <code>runEvals → mergeIntoReport → recordAttempt</code>
+    with the real verdict. An agent can't self-certify by writing <code>status:"done"</code>, and a
+    <em>missing</em> eval-bearing step makes the run-level <code>hardPass</code> false — so a dropped step
+    can't quietly read as success.</p>
+</section>
+
+<!-- CHECKPOINTS -->
+<section id="checkpoints">
+  <h2><span class="n">08</span>Human checkpoints — where a person takes the wheel</h2>
+  <p class="lead">We put humans exactly where judgment beats automation, and nowhere else. Three checkpoints.
+    At each, the Conductor sets status to <code>awaiting_human</code>, renders an HTML dashboard, and stops.</p>
+  <table>
+    <tr><th>Checkpoint</th><th>After</th><th>You're deciding…</th></tr>
+    <tr><td><span class="cpbadge">CP1</span> Intake</td><td>De-identify + provenance</td><td>Are the goals, hypotheses, and transcripts complete and correct? Did every transcript pass the provenance gate?</td></tr>
+    <tr><td><span class="cpbadge">CP2</span> Synthesis</td><td>Themes + saturation</td><td>Do the themes and hypothesis verdicts hold up? Is the sample adequate, or do we need more sessions before reporting?</td></tr>
+    <tr><td><span class="cpbadge">CP3</span> Sign-off</td><td>Report + story + leak scan</td><td>Approve the final report and story. This triggers the retrospective and optional clip cutting.</td></tr>
+  </table>
+  <div class="why"><b>Why three and not more (or fewer)?</b> These are the three moments where a wrong call
+    is expensive and hard to undo: bad inputs poison everything downstream (CP1), a wrong theme becomes a
+    wrong recommendation (CP2), and anything published is public (CP3). Adding checkpoints between every
+    agent would just turn the researcher into a bottleneck. <b>CP3 can't close while a high-severity risk
+    flag is still open</b> — the one place a flag becomes a soft block.</p>
+</section>
+
+<!-- LOOPS -->
+<section id="loops">
+  <h2><span class="n">09</span>Loops — self-correcting, but never runaway</h2>
+  <p class="lead">The pipeline fixes its own mistakes through explicit loops. Every one is capped at
+    <b>10 iterations</b> (<code>config.json → loop.maxIterations</code>, enforced by <code>lib/loop.mjs</code>).
+    Hit the cap and the step goes <code>blocked</code> and surfaces to a human — it never grinds forever.</p>
+
+  <div class="mermaid">
+stateDiagram-v2
+    [*] --> produce
+    produce --> evals: run gate
+    evals --> done: pass
+    evals --> revise: fail (attempt < 10)
+    revise --> produce: author fixes the flagged IDs
+    evals --> blocked: fail (attempt = 10)
+    blocked --> escalate: stop at nearest checkpoint
+    escalate --> produce: human unblocks with a note
+    done --> [*]
+  </div>
+
+  <table>
+    <tr><th>Loop</th><th>Cycle</th><th>On exhaustion (10)</th></tr>
+    <tr><td><b>Revision</b></td><td>producer fails a hard gate → author revises → re-eval</td><td>step <code>blocked</code> → escalate</td></tr>
+    <tr><td><b>Challenge</b></td><td>Devil's Advocate marks <code>unsupported</code>/<code>weak</code> → author revises or drops → re-challenge</td><td>step <code>blocked</code> → escalate</td></tr>
+    <tr><td><b>Mental-model</b></td><td>Mental Model Agent refines its root-cause analysis of a friction pattern</td><td>escalate</td></tr>
+    <tr><td><b>Reconcile</b></td><td>Editor ↔ Storyteller until they don't contradict</td><td>escalate</td></tr>
+    <tr><td><b>Learning</b></td><td>one pass per open correction record</td><td>escalate</td></tr>
+  </table>
+
+  <div class="why"><b>Why cap at 10, and why require a human note to unblock?</b> A cap is the circuit
+    breaker that guarantees termination — no infinite spend, no silent thrash. But we don't just fail hard:
+    <code>loop.mjs unblock</code> lets a human reset the attempt budget <em>with a required note</em> that's
+    journaled. That way an override is always a deliberate, logged human decision, never a hidden manifest
+    edit.</p>
+</section>
+
+<!-- EVIDENCE -->
+<section id="evidence">
+  <h2><span class="n">10</span>Evidence &amp; clips — no claim without a receipt</h2>
+  <p class="lead">This is the heart of the trust model. The <b>Evidence-Verifier</b> proves that every
+    participant quote backing a claim is <b>exact</b>, <b>timestamped</b>, and <b>clip-linked</b> — then
+    drives Marvin to actually cut the clip.</p>
+  <ol class="steps">
+    <li>For every <code>said</code> quote, confirm it's an exact substring of the cited speaker's transcript.</li>
+    <li>Confirm it carries a real timestamp (<code>mm:ss</code> or <code>hh:mm:ss</code>).</li>
+    <li>Derive start/end seconds and drive <code>marvin-clipper</code> to cut a clip; write <code>clip_url</code> back.</li>
+    <li>Anything inexact, untimestamped, or unclipped routes back to the author or clipper (capped at 10).</li>
+    <li>Only clip-backed, exact-quote evidence flows into the report and story.</li>
+  </ol>
+  <div class="note"><b>Pending clips, handled honestly.</b> Because the Marvin MCP isn't wired in this
+    session, <code>allowPendingClips:true</code> lets a run proceed with <code>clip_status:"pending"</code>
+    — but <b>pending never counts as created</b>. The run records it separately and pending clips must be
+    resolved before final sign-off, so we're never fooling ourselves that a clip exists when it doesn't.</p>
+</section>
+
+<!-- PRIVACY -->
+<section id="privacy">
+  <h2><span class="n">11</span>Privacy — traceable to a human, invisible to a reader</h2>
+  <p class="lead">The requirement was precise: a researcher must be able to trace <code>P01</code> back to
+    the exact person and session, but <b>a real name or company must never appear in a shareable file.</b></p>
+
+  <div class="mermaid">
+flowchart LR
+    R[Private roster<br/>name · company · session date/time] -->|pii.mjs key| K[(participant-key.json<br/>GIT-IGNORED)]
+    K --> C[Opaque codes<br/>P01, P02, P03…]
+    C --> T[Redacted transcripts<br/>+ every downstream artifact]
+    T --> S{{pii.mjs scan<br/>every run file}}
+    S -->|clean| OK[Report + Story safe to share]
+    S -->|leak found| BLK[Hard block → bounce to Editor/Storyteller]
+    classDef sec fill:#fdecec,stroke:#dc2626,color:#7f1d1d;
+    class S,BLK sec;
+    classDef safe fill:#e8f7ee,stroke:#16a34a,color:#14532d;
+    class OK safe;
+  </div>
+
+  <div class="why"><b>The key decision: opaque codes, not date-encoded ones.</b> An earlier design encoded
+    the session as <code>P-YYYYMMDD-HHMM</code> — convenient, but that's a <em>quasi-identifier</em>: a date
+    and time can re-identify someone. So codes are now purely opaque (<code>P01, P02…</code>), and the
+    date/time-to-person mapping lives <b>only</b> in the git-ignored crosswalk. An authorized human still
+    traces <code>P01</code> to the real session; no shareable file can.</p>
+
+  <p>Three more safety choices baked into <code>lib/pii.mjs</code>:</p>
+  <ul>
+    <li><b>Fail closed.</b> A missing or empty participant key is a hard error, not a silent skip.</li>
+    <li><b>Scan everything.</b> The leak check runs over <em>every</em> run artifact, not just the final report.</li>
+    <li><b>Extra detectors.</b> Beyond roster names, it catches emails/phones and flags unknown proper nouns (third parties) for review.</li>
+  </ul>
+</section>
+
+<!-- RISK -->
+<section id="risk">
+  <h2><span class="n">12</span>Risk flagging — a triage queue, not a gate</h2>
+  <p class="lead">Some claims can be <em>true</em> yet dangerous to publish or act on. The
+    <b>Risk-Flagger</b> (<code>lib/risk.mjs</code>) raises these for you to triage. It never blocks a
+    producer — but a high-severity flag left <code>open</code> holds CP3 sign-off.</p>
+  <table>
+    <tr><th>Category</th><th>Raised when…</th></tr>
+    <tr><td>overgeneralization</td><td>absolute language, or a group claim from a tiny sample.</td></tr>
+    <tr><td>causal_claim</td><td>causal phrasing on qualitative evidence.</td></tr>
+    <tr><td>weak_support_high_impact</td><td>a recommendation resting on thin evidence.</td></tr>
+    <tr><td>low_evidence_high_confidence</td><td><code>confidence:high</code> but thin evidence.</td></tr>
+    <tr><td>contradiction</td><td>the finding challenges or is challenged by another.</td></tr>
+    <tr><td>sensitive_topic</td><td>legal / ethical / medical / compensation / discrimination / security wording.</td></tr>
+    <tr><td>speculation</td><td>a hedge stated as a finding.</td></tr>
+    <tr><td>absolute_recommendation</td><td>prescriptive "must / never" that may not be warranted.</td></tr>
+  </table>
+  <p>You triage each flag: <code>acknowledged</code>, <code>dismissed</code>, or <code>fixed</code> with a
+    note — and <b>your decisions persist across re-runs</b>, keyed by finding + category, so you never
+    re-triage the same thing twice.</p>
+  <div class="why"><b>Why a flag and not a block?</b> Blocking every risky-sounding claim would gut honest
+    findings — sometimes the sample <em>is</em> small and you want to say so. The right control is a human
+    judgment call, surfaced clearly on the dashboard, with the one guardrail that you can't ship (CP3)
+    while a high-severity flag is unresolved.</p>
+</section>
+
+<!-- DUAL MODEL -->
+<section id="dualmodel">
+  <h2><span class="n">13</span>Dual-model comparison — same pipeline, two brains</h2>
+  <p class="lead">The exact same pipeline runs twice: once on <b>Opus&nbsp;4.8</b>, once on
+    <b>GPT-5.5</b> — identical prompts, skills, and inputs. Then <code>compare.mjs</code> diffs them.</p>
+  <div class="mermaid">
+flowchart TD
+    IN[Same study inputs<br/>identical sha256 hashes] --> O[Run on Opus 4.8]
+    IN --> S[Run on GPT-5.5]
+    O --> V{{verifyRuns<br/>different models?<br/>identical input hashes?}}
+    S --> V
+    V -->|yes| D[compare.mjs<br/>best-match theme Jaccard<br/>agreements · divergences]
+    V -->|no| STOP[Refuse to trust the diff]
+    D --> REP[model-diff.md / .html]
+    classDef g fill:#fdecec,stroke:#dc2626,color:#7f1d1d;
+    class V g;
+  </div>
+  <div class="why"><b>Why verify before trusting agreement?</b> A comparison is only meaningful if the two
+    runs really used <em>different models</em> on <em>identical inputs</em>. <code>verifyRuns()</code> asserts
+    both before reporting any agreement number, so we never accidentally "compare" a model to itself or across
+    mismatched inputs. And we're honest about the limit: with <code>runsPerModel:1</code>, a single run per
+    model mixes the model effect with normal LLM sampling noise — the diff is disclosed as a single-run
+    snapshot, and you can bump the count to separate the two.</p>
+</section>
+
+<!-- SATURATION -->
+<section id="saturation">
+  <h2><span class="n">14</span>Saturation — "do we even have enough data?"</h2>
+  <p class="lead">Before findings become a report, <code>lib/saturation.mjs</code> produces a
+    sample-adequacy artifact and puts it on the CP2 dashboard. It doesn't block — it informs a human judgment.</p>
+  <ul>
+    <li><b>Participants cited / N</b> — how much of your sample actually shows up in the findings.</li>
+    <li><b>Single-participant themes</b> — themes resting on just one voice (fragile).</li>
+    <li><b>New-code emergence curve</b> — are you still discovering new codes, or has the signal plateaued?</li>
+  </ul>
+  <div class="why"><b>Why surface this at all?</b> The most common qualitative sin is reporting a confident
+    theme from too few sessions. Rather than let the pipeline pretend a thin sample is solid, we hand the
+    researcher the evidence to decide "ship it" or "run three more sessions" — at exactly the moment
+    (CP2) when that call is cheap to make.</p>
+</section>
+
+<!-- CONTEXT -->
+<section id="context">
+  <h2><span class="n">15</span>Context hygiene — how we avoid context bloat</h2>
+  <p class="lead">A big risk with multi-agent LLM systems is that context balloons until quality craters.
+    Our answer: <b>state lives in files, not in the conversation.</b> No agent ever has to hold the whole
+    study in its head.</p>
+  <table>
+    <tr><th>Mechanism</th><th>What it does</th></tr>
+    <tr><td><b>File handoffs</b></td><td>Each agent writes one step file and reads only what it needs — its transcripts and the specific upstream files, never the whole history.</td></tr>
+    <tr><td><b>Manifest = status</b></td><td><code>run-manifest.json</code> tracks step status/attempts. Resuming means reading a few fields, not re-ingesting artifacts.</td></tr>
+    <tr><td><b>Run journal</b></td><td>Every attempt auto-appends one compact line to <code>journal.md</code>. <code>journal.mjs show</code> restores "where we are" from ~20 lines.</td></tr>
+    <tr><td><b>Dashboards</b></td><td>Humans review rendered HTML at checkpoints, not raw context.</td></tr>
+    <tr><td><b>Session checkpoints</b></td><td>Long build sessions get checkpointed &amp; summarized so stale detail is discarded instead of accumulating.</td></tr>
+    <tr><td><b>Learning loop appends</b></td><td>Corrections go to the changelog + agent history, read on demand — not carried in context.</td></tr>
+  </table>
+  <div class="note"><b>Yes, we store progress periodically.</b> The journal + manifest are written on every
+    step attempt, so a run can be paused, resumed, or handed off at any point without re-reading everything.</div>
+</section>
+
+<!-- CEREMONIES -->
+<section id="ceremonies">
+  <h2><span class="n">16</span>Ceremonies — reflect before and after</h2>
+  <p class="lead">Two lightweight team meetings bracket the analysis. They keep the agents honest going in
+    and turn every run into learning coming out.</p>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="margin-top:0">🟢 Kickoff &amp; Brainstorm <span class="tag t-seq">before</span></h3>
+      <p>Right after intake, before the specialists spawn. Each agent states what it'll look for and its
+        known bias risks. The team brainstorms: what would surprise us? what would <em>falsify</em> each
+        hypothesis? what moments should Powerful-Moments watch for? Output → <code>00-kickoff.md</code>,
+        part of CP1.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">🔵 Retrospective &amp; Learn <span class="tag t-seq">after</span></h3>
+      <p>After CP3 (or any correction). What did the two models disagree on, and who was right? Which
+        findings did the human correct, and why? Root cause: prompt, skill, rubric, or schema? Each action
+        item becomes a structured correction record that feeds the learning loop.</p>
+    </div>
+  </div>
+  <div class="why"><b>Why bother with ceremonies in an automated system?</b> The kickoff forces agents to
+    <em>pre-register</em> what they're testing and how they could be wrong — the single best defense against
+    confirmation bias. The retrospective is the human-facing half of the learning loop: it's where a run's
+    lessons get captured before they evaporate.</p>
+</section>
+
+<!-- LEARNING -->
+<section id="learning">
+  <h2><span class="n">17</span>The learning loop — the pipeline improves itself</h2>
+  <p class="lead">Every correction you make becomes a <b>durable</b> change to an agent, skill, rubric, or
+    schema — never a throwaway patch. This is what makes the system get better with every study.</p>
+  <div class="mermaid">
+flowchart TD
+    T[Trigger<br/>human correction · retrospective · squad loop] --> C[Collect<br/>open records in corrections/]
+    C --> DG[Diagnose root cause<br/>prompt · skill · rubric · schema · data · model]
+    DG --> FIX[Apply smallest durable fix<br/>to the right artifact]
+    FIX --> LOG[Log to CHANGELOG.md<br/>+ agent history.md]
+    LOG --> GUARD{Touches a shared<br/>contract?}
+    GUARD -->|yes| DR[Run Design Review first]
+    GUARD -->|no| CLOSE[Mark record applied]
+    DR --> CLOSE
+    CLOSE --> CB{Re-broke an eval<br/>10 times?}
+    CB -->|yes| ESC[Stop · escalate to human]
+    CB -->|no| DONE([Improved for next run])
+  </div>
+  <table>
+    <tr><th>Root cause</th><th>Fix lands in…</th></tr>
+    <tr><td>prompt / behavior</td><td>the agent's <code>charter.md</code></td></tr>
+    <tr><td>skill gap</td><td>the relevant <code>SKILL.md</code></td></tr>
+    <tr><td>rubric</td><td><code>severity-scoring</code> / <code>eval-rubrics</code> + thresholds in <code>config.json</code></td></tr>
+    <tr><td>schema</td><td><code>schemas/finding.schema.json</code> (Design Review first)</td></tr>
+    <tr><td>data</td><td>the <code>uxr-intake</code> procedure</td></tr>
+    <tr><td>model</td><td>note it; prefer fixes that help <em>both</em> runs</td></tr>
+  </table>
+  <div class="why"><b>Why fix the artifact and not just re-prompt?</b> A one-off correction helps this run
+    and is forgotten. Fixing the charter/skill/rubric means the mistake <em>can't recur</em> — and because
+    model disagreements usually resolve to a clearer rubric, the fix typically improves both models at once,
+    which strengthens the comparison instead of muddying it.</p>
+</section>
+
+<!-- FILES -->
+<section id="files">
+  <h2><span class="n">18</span>Where everything lives</h2>
+  <pre><span class="c"># Squad agent framework</span>
+.squad/
+  agents/&lt;name&gt;/charter.md   <span class="c"># who does the work + how they think</span>
+  skills/&lt;name&gt;/SKILL.md      <span class="c"># reusable techniques</span>
+  routing.md · team.md · ceremonies.md
+
+<span class="c"># The engine (zero-dependency Node ESM)</span>
+pipeline/lib/
+  run.mjs         <span class="c"># scaffold study, hash inputs, manifest</span>
+  pii.mjs         <span class="c"># opaque codes, redaction, run-wide leak scan</span>
+  provenance.mjs  <span class="c"># sha256 + speaker + timestamp gate</span>
+  evals.mjs       <span class="c"># the hard/soft gate suite</span>
+  conduct.mjs     <span class="c"># makes gates non-optional</span>
+  loop.mjs        <span class="c"># attempts, circuit breaker, unblock</span>
+  saturation.mjs  <span class="c"># sample-adequacy artifact</span>
+  risk.mjs        <span class="c"># risky-argument flags</span>
+  compare.mjs     <span class="c"># dual-model diff + verifyRuns</span>
+  journal.mjs · dashboard.mjs · marvin-adapter.mjs · fsx.mjs · server.mjs · selftest.mjs
+pipeline/schemas/  <span class="c"># finding.schema.json · checker.schema.json</span>
+pipeline/config.json · README.md · workflow.md · loop.md · CHANGELOG.md
+pipeline/docs/pipeline-explained.html   <span class="c"># ← this page</span>
+
+<span class="c"># Per-study data</span>
+studies/&lt;study-id&gt;/
+  inputs/            <span class="c"># goals, hypotheses, notes, transcripts, style-samples/</span>
+    private/         <span class="c"># roster + participant-key.json (code↔name) — GIT-IGNORED</span>
+  runs/opus-4.8/     <span class="c"># per-step outputs + manifest + evals + risk + pii + journal</span>
+  runs/gpt-5.5/   <span class="c"># same, second model</span>
+  comparison/        <span class="c"># model-diff.md / .html</span>
+  dashboards/        <span class="c"># self-contained HTML per checkpoint + index.html</span>
+  corrections/       <span class="c"># learning-loop records</span></pre>
+</section>
+
+<!-- RUN -->
+<section id="run">
+  <h2><span class="n">19</span>How to actually run it</h2>
+  <p>The easy way — ask Squad: <b>"Run the UXR pipeline on study <code>&lt;id&gt;</code> with both models."</b>
+    The Conductor drives intake interactively, spawns the specialists, gates with QA/Evals, stops at the
+    three checkpoints, and builds dashboards.</p>
+  <p>Under the hood, the engine steps are:</p>
+  <pre>cd pipeline
+node lib/selftest.mjs                                <span class="c"># prove the engine works (40 assertions)</span>
+
+node lib/run.mjs init acme-checkout "ACME Checkout"  <span class="c"># scaffold a study</span>
+<span class="c"># ...intake fills studies/acme-checkout/inputs/...</span>
+node lib/pii.mjs key studies/acme-checkout           <span class="c"># assign opaque codes P01, P02…</span>
+node lib/provenance.mjs check studies/acme-checkout  <span class="c"># verify transcript integrity (CP1)</span>
+node lib/run.mjs hash studies/acme-checkout          <span class="c"># hash inputs for reproducibility</span>
+node lib/run.mjs manifest studies/acme-checkout opus-4.8
+<span class="c"># ...agents produce runs/opus-4.8/*.json...</span>
+node lib/evals.mjs studies/acme-checkout opus-4.8 &lt;stepFile&gt;
+node lib/saturation.mjs studies/acme-checkout opus-4.8    <span class="c"># CP2 artifact</span>
+node lib/risk.mjs scan studies/acme-checkout opus-4.8     <span class="c"># risk flags</span>
+node lib/dashboard.mjs studies/acme-checkout             <span class="c"># build dashboards</span>
+<span class="c"># ...repeat for gpt-5.5, then...</span>
+node lib/compare.mjs studies/acme-checkout               <span class="c"># diff the two models</span>
+node lib/pii.mjs scan studies/acme-checkout              <span class="c"># final leak gate</span>
+node lib/server.mjs --port 4173                          <span class="c"># live dashboard</span></pre>
+  <div class="note"><b>Marvin note.</b> Transcripts are read <b>directly</b> — never Marvin's Ask AI —
+    via <code>lib/marvin-adapter.mjs</code>. The Marvin MCP isn't connected in this session yet, so the
+    adapter reads locally-saved transcripts and uses pending-clip placeholders. When Marvin MCP is wired,
+    the saved-file contract stays identical, so nothing downstream changes.</div>
+</section>
+
+<!-- DECISIONS -->
+<section id="decisions">
+  <h2><span class="n">20</span>Decision log — the "why" in one table</h2>
+  <p>Every non-obvious call we made, and the reasoning in one line.</p>
+  <table>
+    <tr><th>Decision</th><th>Why we chose it</th></tr>
+    <tr><td>Read transcripts directly, not via Ask AI</td><td>We must ground on raw speaker turns; a summary can't be verified word-for-word.</td></tr>
+    <tr><td>22 specialist agents, not one</td><td>Narrow charters reason better and make the system observable and debuggable.</td></tr>
+    <tr><td>Pain Points ≠ Papercuts (separate agents)</td><td>Blockers and minor friction need different severity rubrics; conflating them is a classic error.</td></tr>
+    <tr><td>Hybrid parallel + sequential</td><td>Parallel where work is independent (speed); sequential where it depends on the whole (correctness).</td></tr>
+    <tr><td>Gates in deterministic code, not prompts</td><td>Same input → same verdict, every time. Reproducible and hard to fool.</td></tr>
+    <tr><td>Speaker-scoped hallucination check</td><td>Prevents attributing one participant's words to another.</td></tr>
+    <tr><td>Reward refuted hypotheses in coverage</td><td>Kills pressure to "find support"; disconfirmation is a valid, valuable result.</td></tr>
+    <tr><td>Opaque codes, not date-encoded</td><td>A date/time is a quasi-identifier; opaque codes + a private crosswalk keep traceability without re-identification risk.</td></tr>
+    <tr><td>PII scan over every artifact, fail-closed</td><td>Leaks hide in intermediate files, not just the report; a missing key must never pass silently.</td></tr>
+    <tr><td>Risk = flag, not block</td><td>Blocking honest small-sample claims would gut findings; a human triage call is the right control.</td></tr>
+    <tr><td>Three human checkpoints</td><td>Placed where a wrong call is expensive and hard to undo — inputs, themes, publication.</td></tr>
+    <tr><td>Loops capped at 10 + human unblock</td><td>Guarantees termination; overrides are deliberate, logged human decisions.</td></tr>
+    <tr><td>Dual-model with verifyRuns</td><td>A comparison is only trustworthy if it's genuinely two models on identical inputs.</td></tr>
+    <tr><td>State in files, not conversation</td><td>Prevents context bloat; enables pause/resume/handoff.</td></tr>
+    <tr><td>Corrections → durable artifact fixes</td><td>A mistake fixed in a charter/rubric can't recur, and usually improves both models.</td></tr>
+  </table>
+</section>
+
+<footer>
+  <p><b>UXR Qualitative Analysis Pipeline v0.3.0</b> — self-test: 40/40 green · all 26 audit findings fixed.
+    Built on the <a href="https://github.com/bradygaster/squad">Squad</a> agent framework with a
+    zero-dependency Node engine.</p>
+  <p>Full detail: <code>pipeline/README.md</code> · orchestration: <code>pipeline/workflow.md</code> ·
+    learning loop: <code>pipeline/loop.md</code> · change history: <code>pipeline/CHANGELOG.md</code>.</p>
+</footer>
+
+</main>
+</div>
+</body>
+</html>

@@ -1,0 +1,120 @@
+{
+  "model": "gpt-5.5",
+  "generated_at": "2026-07-09T05:47:56.532Z",
+  "denominator_N": 3,
+  "participants_cited": 3,
+  "coverage_ratio": 1,
+  "per_participant_findings": {
+    "P01": 5,
+    "P03": 5,
+    "P02": 5
+  },
+  "themes": [
+    {
+      "id": "PAIN-001",
+      "type": "pain_point",
+      "n": 2,
+      "N": 3,
+      "representativeness": "representative"
+    },
+    {
+      "id": "PAIN-002",
+      "type": "pain_point",
+      "n": 1,
+      "N": 3,
+      "representativeness": "illustrative"
+    },
+    {
+      "id": "PAPER-001",
+      "type": "papercut",
+      "n": 1,
+      "N": 3,
+      "representativeness": "illustrative"
+    },
+    {
+      "id": "REC-001",
+      "type": "design_recommendation",
+      "n": 1,
+      "N": 3,
+      "representativeness": "illustrative"
+    },
+    {
+      "id": "THEME-001",
+      "type": "theme",
+      "n": 3,
+      "N": 3,
+      "representativeness": "representative"
+    },
+    {
+      "id": "THEME-002",
+      "type": "theme",
+      "n": 1,
+      "N": 3,
+      "representativeness": "illustrative"
+    }
+  ],
+  "single_participant_themes": [],
+  "emergence": [
+    {
+      "finding": "BEH-001",
+      "new_participants": 1,
+      "cumulative": 1
+    },
+    {
+      "finding": "BEH-002",
+      "new_participants": 1,
+      "cumulative": 2
+    },
+    {
+      "finding": "VERB-001",
+      "new_participants": 0,
+      "cumulative": 2
+    },
+    {
+      "finding": "VERB-002",
+      "new_participants": 1,
+      "cumulative": 3
+    },
+    {
+      "finding": "PAIN-001",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "PAIN-002",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "PAPER-001",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "REC-001",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "MOM-001",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "MOM-002",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "THEME-001",
+      "new_participants": 0,
+      "cumulative": 3
+    },
+    {
+      "finding": "THEME-002",
+      "new_participants": 0,
+      "cumulative": 3
+    }
+  ],
+  "adequacy_flags": []
+}

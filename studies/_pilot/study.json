@@ -1,0 +1,8 @@
+{
+  "study_id": "_pilot",
+  "name": "Pilot — Agentic Coding Trust",
+  "models": [
+    "opus-4.8",
+    "gpt-5.5"
+  ]
+}

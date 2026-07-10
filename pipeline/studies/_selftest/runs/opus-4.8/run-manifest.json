@@ -1,0 +1,211 @@
+{
+  "run_id": "_selftest-opus-4.8-1783574969247",
+  "study_id": "_selftest",
+  "model": "opus-4.8",
+  "pipeline_version": "0.3.0",
+  "created_at": "2026-07-09T05:29:29.247Z",
+  "inputs": {},
+  "steps": [
+    {
+      "step": "00b-data-quality-report",
+      "agent": "data-integrity",
+      "status": "pending",
+      "output": "runs/opus-4.8/00b-data-quality-report.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "01b-participant-narratives",
+      "agent": "participant-narrative",
+      "status": "pending",
+      "output": "runs/opus-4.8/01b-participant-narratives.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "00-kickoff",
+      "agent": "conductor",
+      "status": "pending",
+      "output": "runs/opus-4.8/00-kickoff.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "02b-evidence-bank",
+      "agent": "evidence-extraction",
+      "status": "pending",
+      "output": "runs/opus-4.8/02b-evidence-bank.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "02-open-codes",
+      "agent": "open-coding",
+      "status": "pending",
+      "output": "runs/opus-4.8/02-open-codes.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "02c-empathy",
+      "agent": "empathy-builder",
+      "status": "pending",
+      "output": "runs/opus-4.8/02c-empathy.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "01-observed-behavior",
+      "agent": "observed-behavior",
+      "status": "pending",
+      "output": "runs/opus-4.8/01-observed-behavior.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "02-verbatim",
+      "agent": "verbatim",
+      "status": "pending",
+      "output": "runs/opus-4.8/02-verbatim.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "03-pain-points",
+      "agent": "pain-points",
+      "status": "pending",
+      "output": "runs/opus-4.8/03-pain-points.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "04-papercuts",
+      "agent": "papercuts",
+      "status": "pending",
+      "output": "runs/opus-4.8/04-papercuts.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "05-design-recommendations",
+      "agent": "design-recommendations",
+      "status": "pending",
+      "output": "runs/opus-4.8/05-design-recommendations.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "06b-powerful-moments",
+      "agent": "powerful-moments",
+      "status": "pending",
+      "output": "runs/opus-4.8/06b-powerful-moments.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "06-devils-advocate",
+      "agent": "devils-advocate",
+      "status": "pending",
+      "output": "runs/opus-4.8/06-devils-advocate.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "05b-mental-models",
+      "agent": "mental-model",
+      "status": "pending",
+      "output": "runs/opus-4.8/05b-mental-models.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "07-synthesis",
+      "agent": "synthesizer",
+      "status": "pending",
+      "output": "runs/opus-4.8/07-synthesis.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "07b-saturation",
+      "agent": "qa-evals",
+      "status": "pending",
+      "output": "runs/opus-4.8/07b-saturation.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "08b-evidence-verify",
+      "agent": "evidence-verifier",
+      "status": "pending",
+      "output": "runs/opus-4.8/08b-evidence-verify.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "08c-risk-flags",
+      "agent": "risk-flagger",
+      "status": "pending",
+      "output": "runs/opus-4.8/08c-risk-flags.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "08-product-implications",
+      "agent": "product-implication",
+      "status": "pending",
+      "output": "runs/opus-4.8/08-product-implications.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "08-qa-evals",
+      "agent": "qa-evals",
+      "status": "pending",
+      "output": "runs/opus-4.8/08-qa-evals.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "09-report",
+      "agent": "editor",
+      "status": "pending",
+      "output": "runs/opus-4.8/09-report.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "09b-story",
+      "agent": "storyteller",
+      "status": "pending",
+      "output": "runs/opus-4.8/09b-story.json",
+      "attempts": 0,
+      "max_attempts": 10
+    },
+    {
+      "step": "pii-scan",
+      "agent": "privacy",
+      "status": "pending",
+      "output": "runs/opus-4.8/pii-scan.json",
+      "attempts": 0,
+      "max_attempts": 10
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP1-intake",
+      "kind": "human",
+      "status": "pending"
+    },
+    {
+      "id": "CP2-synthesis",
+      "kind": "human",
+      "status": "pending"
+    },
+    {
+      "id": "CP3-signoff",
+      "kind": "human",
+      "status": "pending"
+    }
+  ]
+}
