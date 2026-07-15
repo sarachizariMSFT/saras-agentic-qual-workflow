@@ -9,6 +9,8 @@
 
 # UXR pipeline: private participant crosswalks (never commit)
 studies/**/inputs/private/
+# UXR pipeline: studies stay local only (never commit any study artifacts)
+studies/**
 
 # Node
 node_modules/
