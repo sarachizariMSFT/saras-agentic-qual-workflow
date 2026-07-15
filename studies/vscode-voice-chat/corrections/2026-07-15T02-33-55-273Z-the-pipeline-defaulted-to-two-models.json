@@ -1,0 +1,16 @@
+{
+  "id": "COR-2026-07-15-08",
+  "study_id": "vscode-voice-chat",
+  "run_model": "n/a",
+  "target": "config",
+  "target_id": "run",
+  "problem": "The pipeline defaulted to two models, so I had to ask it to skip gpt-5.5 every time.",
+  "root_cause": "process",
+  "correction": "Default to a single model and only run the second one on request.",
+  "change": "Added config.run.dualModel:false and comparison.enabled:false; run.mjs runs the primary model by default.",
+  "status": "applied",
+  "created_at": "2026-07-15T02:33:55.273Z",
+  "source_turn": 5,
+  "applied_at": "2026-07-15T02:33:55.305Z",
+  "changelog_ref": "LEARN-08"
+}

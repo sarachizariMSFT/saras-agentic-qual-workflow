@@ -13,16 +13,21 @@ agents, skills, rubrics, or schema — not a one-off fix. Driven by the Conducto
 ## Patterns
 
 ### Correction record
-On any correction/rejection, write `studies/<study-id>/corrections/<timestamp>-<slug>.json`:
+On any correction/rejection, add a structured correction record:
+```powershell
+node lib/corrections.mjs add <studyRoot> --target <finding|agent|skill|eval|schema|workflow|config|data> --root <prompt|skill-gap|rubric|schema|data|model|process> --problem "..." --correction "..." --change "..." [--target-id <e.g. editor>] [--model <opus-4.8|gpt-5.5|both|n/a>] [--turn N]
+```
+
+Records live in `studies/<study-id>/corrections/*.json` and follow `pipeline/schemas/correction.schema.json`:
 ```json
 {
   "id": "COR-2026-07-08-01",
   "study_id": "...",
   "run_model": "opus-4.8 | gpt-5.5 | both",
-  "target": "finding | agent | skill | eval | schema | workflow",
+  "target": "finding | agent | skill | eval | schema | workflow | config | data",
   "target_id": "PAIN-005 | pain-points | severity-scoring | ...",
   "problem": "What was wrong (human's words).",
-  "root_cause": "prompt | skill-gap | rubric | schema | data | model",
+  "root_cause": "prompt | skill-gap | rubric | schema | data | model | process",
   "correction": "The specific fix.",
   "change": "What to change in the repo so it doesn't recur.",
   "status": "open | applied"
@@ -30,13 +35,21 @@ On any correction/rejection, write `studies/<study-id>/corrections/<timestamp>-<
 ```
 
 ### Applying the loop (`squad loop` reads `pipeline/loop.md`)
-1. Read open correction records.
-2. For each, edit the right artifact: agent `charter.md`, a `SKILL.md`, an eval threshold in `evals.mjs`,
+Use:
+```powershell
+node lib/corrections.mjs list <studyRoot> [open|applied|all]
+node lib/corrections.mjs apply <studyRoot> <COR-id> ["CHANGELOG ref"]
+```
+
+At CP3:
+1. Collect each human correction as a correction record.
+2. Read open correction records.
+3. For each, edit the right artifact: agent `charter.md`, a `SKILL.md`, an eval threshold in `evals.mjs`,
    or the schema. Small, surgical, reversible edits.
-3. Append a line to `pipeline/CHANGELOG.md`: date, correction id, files changed, one-line rationale.
-4. Append the learning to the affected agent's `history.md`.
-5. Mark the record `applied`.
-6. If the change touches a shared contract (schema, eval rubric, workflow), run Design Review first.
+4. Append a line to `pipeline/CHANGELOG.md`: date, correction id, files changed, one-line rationale.
+5. Append the learning to the affected agent's `history.md`.
+6. Mark the record `applied`.
+7. If the change touches a shared contract (schema, eval rubric, workflow), run Design Review first.
 
 ### Model-specific learnings
 If only one model erred, note it in the record. Prefer fixes that improve both runs; only diverge prompts if

@@ -186,6 +186,34 @@ export function runEvals(studyRoot, model, stepFile, goalsFile) {
     results.offenders.causal_support = causalWeak.map(f => f.id);
   }
 
+  // interpretation_support (SOFT): catch OVER-READING — a statement that introduces an enumerated
+  // category/count ("two modes", "three types") or an attribution of belief ("participants attributed
+  // X", "understood it as Y") whose structure isn't visible in the cited quotes. The exactness gates
+  // prove a quote is real; they don't prove the interpretation stayed inside it. This is the class of
+  // miss that reads as "0 unsupported" yet invents a distinction the data doesn't carry. Soft by
+  // design: it routes the finding to the Devil's Advocate / author for a second look, never auto-blocks.
+  const ENUM_RE = /\b(two|three|four|five|2|3|4|5)\s+(modes?|types?|categories|kinds?|groups?|buckets?|reasons?|ways|phases?|stages?)\b/i;
+  const ATTRIB_RE = /\b(attributed|perceived it|understood it as|saw it as|thought it was|assumed it was|interpreted it as|believed it was)\b/i;
+  const overreach = [];
+  for (const f of findings) {
+    const s = f.statement || '';
+    const quotes = norm((f.evidence || []).map(e => e.quote).join(' '));
+    const em = s.match(ENUM_RE);
+    if (em) {
+      const noun = norm(em[2]).replace(/s$/, ''); // singularize the head noun (modes -> mode)
+      if (noun && !quotes.includes(noun)) overreach.push({ id: f.id, kind: 'enumerated_category', phrase: em[0] });
+    }
+    const am = s.match(ATTRIB_RE);
+    if (am) {
+      const hasBehavioral = (f.evidence || []).some(e => e.observation_type === 'did' || e.observation_type === 'observed');
+      if (!hasBehavioral) overreach.push({ id: f.id, kind: 'attribution_without_behavior', phrase: am[0] });
+    }
+  }
+  if (overreach.length) {
+    results.evals.interpretation_support = { gate: 'soft', pass: false, failing: overreach.length };
+    results.offenders.interpretation_support = overreach;
+  }
+
   // coverage (SOFT): every hypothesis is ADDRESSED — supported, refuted, mixed, OR explicitly
   // insufficient_evidence. A refuted/insufficient hypothesis counts as covered (anti-confirmation-bias):
   // we reward looking for disconfirmation, not just mapping findings onto expected stories.

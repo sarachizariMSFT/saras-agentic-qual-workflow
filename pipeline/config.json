@@ -1,6 +1,13 @@
 {
-  "pipeline_version": "0.3.0",
+  "pipeline_version": "0.4.0",
   "models": ["opus-4.8", "gpt-5.5"],
+  "run": {
+    "primaryModel": "opus-4.8",
+    "dualModel": false,
+    "fastModeDefault": false,
+    "fastMaxParallel": 4,
+    "note": "Single-model by default (primaryModel). The second model + comparison only run when dualModel is true (or the Conductor is invoked with --dual). Single runs skip the gpt-5.5 pass and compare.mjs entirely. Set dualModel:true when you specifically want a cross-model reliability check. Fast mode (`--fast`) keeps all gates unchanged and uses a bounded, dependency-aware pool for Phase 3 producers; tune pool size with run.fastMaxParallel."
+  },
   "loop": {
     "maxIterations": 10,
     "onExhaustion": "escalate_to_human",
@@ -52,13 +59,15 @@
     "note": "Owned by the Privacy agent. Codes are OPAQUE (P01, P02…); session date/time lives ONLY in the private crosswalk, never in shareable files. The scan fails CLOSED: a missing/empty participant key is an error, not a pass. Beyond roster names/companies, pattern detectors catch emails/phones and flag unknown proper nouns (third parties) for human review. PII is scanned on every step output, not just the final report."
   },
   "comparison": {
+    "enabled": false,
     "models": ["opus-4.8", "gpt-5.5"],
     "runsPerModel": 1,
-    "note": "Dual-model comparison. runsPerModel>1 lets you separate model differences from LLM sampling noise; with n=1 the diff is disclosed as a single-run snapshot. compare.mjs verifies the two runs used DIFFERENT models and IDENTICAL input hashes before trusting any agreement number."
+    "note": "Dual-model comparison, OFF by default (see run.dualModel). When enabled, runsPerModel>1 lets you separate model differences from LLM sampling noise; with n=1 the diff is disclosed as a single-run snapshot. compare.mjs verifies the two runs used DIFFERENT models and IDENTICAL input hashes before trusting any agreement number."
   },
   "analysis": {
     "saturationThreshold": 2,
-    "note": "Number of consecutive transcripts with no new codes to trigger saturation indicator (owned by Open Coding agent)."
+    "nonParticipantSpeakers": ["Agent", "Assistant", "Voice", "Moderator", "Facilitator", "Observer", "Interviewer", "Researcher", "System"],
+    "note": "saturationThreshold: consecutive transcripts with no new codes to trigger saturation (Open Coding). nonParticipantSpeakers: speaker labels that are NOT study participants (the product's own voice, the moderator, internal observers) — excluded from saturation counts so a product 'Agent' turn can't be miscounted as a participant. Roster entries with role observer/facilitator (coded OBS../FAC..) are excluded too."
   },
   "mental_model": {
     "minSeverityForFlag": "high",
@@ -67,5 +76,28 @@
   "product_implications": {
     "minPriorityLevel": "medium",
     "note": "Product Implication Agent prioritizes opportunities as high/medium/low; only high/medium typically go on roadmap."
+  },
+  "style": {
+    "requireStyleSample": true,
+    "hardPatterns": [
+      { "id": "em-dash-in-prose", "regex": "—", "flags": "", "ignoreQuoted": true, "message": "Em dash in prose. Use a period, comma, or 'and'. (Allowed only inside a verbatim participant quote.)" },
+      { "id": "not-because", "regex": "\\bnot because\\b", "flags": "i", "message": "'not because X, because Y' construction. State the reason plainly." },
+      { "id": "in-the-same-breath", "regex": "in the same breath", "flags": "i", "message": "Cliché. Cut it." },
+      { "id": "throat-clearing", "regex": "it is important to note|it's important to note|it is worth noting|worth holding|needless to say", "flags": "i", "message": "AI throat-clearing / hedging. Delete it." },
+      { "id": "buzzwords", "regex": "\\b(cutting-edge|robust|seamless|leverage|synergy|delve|game-?chang\\w*)\\b|in today's fast-paced", "flags": "i", "ignoreQuoted": true, "message": "Buzzword. Replace with plain language." }
+    ],
+    "softPatterns": [
+      { "id": "not-x-but-y", "regex": "\\bnot\\b[^.?!\\n]{1,40}?\\bbut\\b", "flags": "i", "ignoreQuoted": true, "message": "'not X but Y' framing. Consider saying what it is directly." },
+      { "id": "developers-not-participants", "regex": "\\bdevelopers?\\b", "flags": "i", "ignoreQuoted": true, "message": "Prefer 'participants' over 'developers' when referring to the people in this study." },
+      { "id": "pervasive", "regex": "\\bpervasive\\b", "flags": "i", "message": "Avoid 'pervasive'. Say 'common' or give the count." },
+      { "id": "present-tense-observation", "regex": "\\bwhat stands out\\b|\\bwhat'?s (interesting|notable|striking)\\b", "flags": "i", "message": "Write observations in past tense (e.g. 'what stood out')." }
+    ],
+    "note": "House style-lint for the report + story (skill humanizer, run by Editor/Storyteller). hardPatterns BLOCK the reconcile loop until clean; softPatterns surface as warnings on the CP3 dashboard. ignoreQuoted:true skips matches inside double-quoted text and blockquote (>) lines, so an em dash inside a verbatim quote is allowed. Tune this list through the learning loop as Sara's voice sharpens."
+  },
+  "export": {
+    "docxEngine": "builtin",
+    "embedClips": true,
+    "deliverables": ["09-report.docx", "10-story.docx"],
+    "note": "Deliverable export (lib/export.mjs), run by Editor/Storyteller after CP3 sign-off. docxEngine 'builtin' is a zero-dependency md->docx writer (portable, no external binary); set 'pandoc' to shell out to pandoc when installed (richer fidelity) with automatic fallback to builtin. embedClips:true means every participant quote renders with its Marvin clip_url as a link so reviewers can play the moment from the doc."
   }
 }

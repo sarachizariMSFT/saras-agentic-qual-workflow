@@ -5,7 +5,7 @@
 // saturation -> evidence-verify -> risk -> product implications -> report/story -> PII gate ->
 // checkpoints -> dashboards -> dual-model compare. Uses synthetic-but-contract-valid data.
 //
-// Run from pipeline/:  node _pilot.mjs
+// Run from pipeline/:  node _pilot.mjs [--fast] [--max-parallel N]
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -22,12 +22,16 @@ import { compare } from './lib/compare.mjs';
 import { buildAll } from './lib/dashboard.mjs';
 import { validate } from './lib/validate.mjs';
 import { readJSONSafe, updateJSON } from './lib/fsx.mjs';
+import { withConcurrency } from './lib/scheduler.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 const STUDY = path.join(ROOT, 'studies', '_pilot');
 const MODELS = ['opus-4.8', 'gpt-5.5'];
 const SCHEMAS = path.join(__dirname, 'schemas');
+const FAST = process.argv.includes('--fast');
+const mp = process.argv.indexOf('--max-parallel');
+const MAX_PARALLEL = Math.max(1, Number(mp > -1 ? process.argv[mp + 1] : '4') || 4);
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log(`  \u2713 ${m}`); } else { fail++; console.error(`  \u2717 ${m}`); } };
@@ -239,7 +243,7 @@ function signOffCheckpoints(model) {
   }, { checkpoints: [] });
 }
 
-function runModel(model) {
+async function runModel(model) {
   sec(`### Run model: ${model}`);
   const goals = path.join(STUDY, 'inputs', 'hypotheses.md');
 
@@ -265,12 +269,20 @@ function runModel(model) {
 
   // Six parallel producers -> conductStep (real evals + loop)
   const producers = producerFindings(model);
-  for (const [step, findings] of Object.entries(producers)) {
+  const jobs = Object.entries(producers);
+  const runProducer = ([step, findings]) => {
     const out = path.join(runDir(model), `${step}.json`);
     wj(out, findings);
     const r = conductStep(STUDY, model, step, out, goals);
     ok(r.hardPass, `${model}: ${step} passed all hard gates (${findings.length} findings)`);
     if (!r.hardPass) console.error('     offenders:', JSON.stringify(r.failed));
+  };
+  if (FAST) {
+    const width = Math.min(MAX_PARALLEL, jobs.length);
+    console.log(`  fast mode: running ${jobs.length} Phase 3 producers with max parallel ${width}`);
+    await withConcurrency(jobs, width, async (job) => { runProducer(job); });
+  } else {
+    for (const job of jobs) runProducer(job);
   }
 
   // Challenge: Devil's Advocate (checker objects) + Mental Model already written above
@@ -337,8 +349,9 @@ function runModel(model) {
 sec('## PILOT — full 22-agent pipeline, both models');
 setup();
 ok(checkProvenance(STUDY).ok !== false, 'provenance gate passes (raw, unchanged, transcript-like)');
+if (FAST) console.log(`fast mode enabled for Phase 3 producers (max parallel ${MAX_PARALLEL})`);
 
-for (const m of MODELS) runModel(m);
+for (const m of MODELS) await runModel(m);
 
 sec('### Dual-model comparison + dashboards');
 const cmp = compare(STUDY);

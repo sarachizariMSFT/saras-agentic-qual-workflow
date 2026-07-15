@@ -21,6 +21,11 @@ import { computeSaturation } from './saturation.mjs';
 import { compare } from './compare.mjs';
 import { buildAll } from './dashboard.mjs';
 import { writeJSONAtomic, readJSONSafe, updateJSON } from './fsx.mjs';
+import { lintText, checkStyleSample } from './stylelint.mjs';
+import { addRequest, resolveRequest, requestsGate, openRequests } from './requests.mjs';
+import { recordCorrection, listCorrections, markApplied, openCorrections } from './corrections.mjs';
+import { mdToDocxBuffer, extractEntry } from './export.mjs';
+import { withConcurrency, eligibleGroupSteps } from './scheduler.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -285,6 +290,152 @@ function testDashboards() {
   ok(/PII scan clean|PII LEAK/i.test(cp2), 'CP2 dashboard includes the PII panel');
 }
 
+function testStyleLint() {
+  section('11) House-style gate (Update 1: humanizer becomes a real, deterministic gate)');
+  const bad = lintText('The result was clear — participants gave up.');
+  ok(bad.hard.some(h => h.id === 'em-dash-in-prose'), 'an em dash in prose trips a HARD style rule');
+  ok(lintText('> I tried it — then I quit.').hard.length === 0, 'an em dash inside a blockquote (verbatim quote) is NOT flagged');
+  ok(lintText('One participant said "I tried it — then I quit" out loud.').hard.length === 0, 'an em dash inside a double-quoted verbatim is NOT flagged');
+  const soft = lintText('Most developers wanted a shortcut.');
+  ok(soft.soft.some(s => s.id === 'developers-not-participants'), '"developers" surfaces as a SOFT warning');
+  ok(soft.hard.length === 0, 'a soft-only issue does not trip the hard gate');
+  const noSample = checkStyleSample(STUDY);
+  ok(noSample.required === true && noSample.pass === false, 'check-sample FAILS when no writing-style sample is present');
+  fs.mkdirSync(path.join(STUDY, 'inputs', 'style-samples'), { recursive: true });
+  fs.writeFileSync(path.join(STUDY, 'inputs', 'style-samples', 'past-report.md'), '# Past report\nShort, plain sentences.\n');
+  ok(checkStyleSample(STUDY).pass === true, 'check-sample PASSES once a style sample is captured');
+}
+
+function testRoles() {
+  section('12) Participant roles + non-participant exclusion (Update 2)');
+  const RD = path.join(ROOT, 'studies', '_selftest_roles');
+  rm(RD);
+  writeJSON(path.join(RD, 'inputs', 'private', 'roster.json'), [
+    { name: 'Ann Diaz', company: 'Acme', session_datetime: '2026-07-02T14:00:00Z' },
+    { name: 'Bob Ng', company: 'Globex', role: 'observer' },
+    { name: 'Cara Poe', company: 'Initech', role: 'facilitator' },
+  ]);
+  const key = buildKey(RD);
+  ok(!!key.P01 && key.P01.role === 'participant', 'a participant is coded P01 with role participant');
+  ok(!!key.OBS01 && key.OBS01.role === 'observer', 'an observer is coded OBS01, not a P-code');
+  ok(!!key.FAC01 && key.FAC01.role === 'facilitator', 'a facilitator is coded FAC01, not a P-code');
+  const pub = fs.readFileSync(path.join(RD, 'inputs', 'participant-codes.md'), 'utf8');
+  ok(/\bP01\b/.test(pub) && !/OBS01|FAC01/.test(pub), 'public participant-codes.md lists participants only (no OBS/FAC)');
+
+  // saturation must not count the product's own "Agent" voice as a participant
+  fs.mkdirSync(path.join(RD, 'inputs', 'transcripts'), { recursive: true });
+  fs.writeFileSync(path.join(RD, 'inputs', 'transcripts', 'P01.md'), '[00:01:00] P01: I could not find the setting.\n');
+  writeJSON(path.join(RD, 'runs', 'opus-4.8', '03-pain-points.json'), [finding({
+    id: 'PAIN-100', supporting_participants: ['P01', 'Agent'], representativeness: 'illustrative',
+    evidence: [said({ participant: 'P01' })],
+  })]);
+  const sat = computeSaturation(RD, 'opus-4.8');
+  ok(!('Agent' in sat.per_participant_findings), 'the product "Agent" speaker is excluded from saturation counts');
+  ok(sat.per_participant_findings.P01 >= 1 && sat.participants_cited === 1, 'only real participants (P01) are counted, so no 8-of-7 inflation');
+  rm(RD);
+}
+
+function testInterpretationSupport() {
+  section('13) Over-reading soft gate (Update 3: interpretation_support)');
+  const base = path.join(STUDY, 'runs', 'opus-4.8');
+  const enumF = path.join(base, 'probe-enum.json');
+  writeJSON(enumF, [finding({ id: 'PAIN-201',
+    statement: 'Participants used two modes of the assistant.',
+    evidence: [said({ quote: 'I honestly gave up and used the spreadsheet' })] })]);
+  const er = runEvals(STUDY, 'opus-4.8', enumF);
+  ok(er.evals.interpretation_support && er.evals.interpretation_support.pass === false, 'an invented "two modes" enumeration trips interpretation_support');
+  ok(er.hardPass === true, 'interpretation_support is SOFT — it does not fail the hard gate');
+
+  const attrF = path.join(base, 'probe-attr.json');
+  writeJSON(attrF, [finding({ id: 'PAIN-202',
+    statement: 'The participant attributed the failure to the button label.',
+    evidence: [said({ quote: 'I honestly gave up and used the spreadsheet' })] })]);
+  const ar = runEvals(STUDY, 'opus-4.8', attrF);
+  ok(ar.evals.interpretation_support && ar.evals.interpretation_support.pass === false, 'an attribution with no observed behavior trips interpretation_support');
+
+  const cleanF = path.join(base, 'probe-clean.json');
+  writeJSON(cleanF, [finding()]);
+  const cr = runEvals(STUDY, 'opus-4.8', cleanF);
+  ok(cr.evals.interpretation_support === undefined, 'a grounded finding with no over-read is not flagged');
+  for (const f of [enumF, attrF, cleanF]) rm(f);
+}
+
+function testRequests() {
+  section('14) Researcher-ask tracker (Update 4: nothing the researcher asks silently drops)');
+  const r1 = addRequest(STUDY, 'What about settings defaults?', { turn: 37 });
+  ok(/^REQ-\d{3}$/.test(r1.id) && r1.status === 'open', 'a researcher ask is logged as an OPEN request');
+  ok(requestsGate(STUDY).pass === false, 'CP3 gate is BLOCKED while a request is open');
+  resolveRequest(STUDY, r1.id, 'Added a settings-defaults sub-section to the report.');
+  ok(openRequests(STUDY).length === 0, 'resolving the request clears the open list');
+  ok(requestsGate(STUDY).pass === true, 'CP3 gate PASSES once every request is addressed');
+  rm(path.join(STUDY, 'researcher-requests.json'));
+}
+
+function testCorrections() {
+  section('15) Learning-loop ledger (Update 6: corrections become durable records)');
+  const { rec } = recordCorrection(STUDY, {
+    target: 'agent', target_id: 'editor', run_model: 'opus-4.8', root_cause: 'skill-gap',
+    problem: 'Report said "developers" instead of "participants".',
+    correction: 'Use "participants" throughout the report and story.',
+    change: 'Added the developers-not-participants soft rule to config.style.',
+    source_turn: 11,
+  });
+  ok(/^COR-\d{4}-\d{2}-\d{2}-\d{2}$/.test(rec.id) && rec.status === 'open', 'a correction is recorded as an OPEN COR-YYYY-MM-DD-NN record');
+  ok(listCorrections(STUDY, 'open').length >= 1, 'the open correction is listed');
+  markApplied(STUDY, rec.id, 'LEARN-01');
+  ok(openCorrections(STUDY).length === 0, 'marking applied clears it from the open list');
+  ok(listCorrections(STUDY, 'applied').some(c => c.changelog_ref === 'LEARN-01'), 'an applied correction records its CHANGELOG ref');
+  let threw = false;
+  try { recordCorrection(STUDY, { target: 'agent', root_cause: 'prompt', problem: 'missing change field here', correction: 'do the thing' }); } catch { threw = true; }
+  ok(threw, 'a correction missing a required field (change) is rejected by the schema');
+  rm(path.join(STUDY, 'corrections'));
+}
+
+function testExport() {
+  section('16) Deliverable docx export (Update 7: md -> docx with embedded clip links)');
+  const md = [
+    '# Voice Collaboration', '', '## Theme 1',
+    'Participants relied on the spreadsheet fallback.', '',
+    '> I honestly gave up and used the spreadsheet.', '',
+    'See the [clip](https://heymarvin.com/clip/abc) for the moment.', '',
+    '- first point', '- second point',
+  ].join('\n');
+  const buf = mdToDocxBuffer(md);
+  ok(buf.slice(0, 2).toString('latin1') === 'PK', 'the .docx starts with the ZIP (PK) signature');
+  const doc = extractEntry(buf, 'word/document.xml');
+  ok(!!doc && doc.includes('Voice Collaboration'), 'document.xml carries the report text');
+  ok(/w:pStyle w:val="Quote"/.test(doc || ''), 'a markdown blockquote becomes a Word Quote paragraph');
+  ok(/<w:hyperlink r:id=/.test(doc || ''), 'a markdown link becomes a real Word hyperlink');
+  const rels = extractEntry(buf, 'word/_rels/document.xml.rels');
+  ok(!!rels && rels.includes('heymarvin.com'), 'the clip URL is written as an external relationship (playable link)');
+}
+
+async function testFastScheduling() {
+  section('17) Fast scheduler metadata + bounded parallel worker pool');
+  const m = readJSONSafe(path.join(STUDY, 'runs', 'opus-4.8', 'run-manifest.json'));
+  ok(m?.execution?.fast?.strategy === 'dependency-aware-pool', 'manifest records fast scheduler strategy metadata');
+  const p3 = (m.steps || []).filter(s => s.parallel_group === 'phase3-producers');
+  ok(p3.length === 6, 'manifest marks all six Phase 3 producer steps as parallel-group members');
+  ok(p3.every(s => Array.isArray(s.depends_on) && s.depends_on.includes('02c-empathy')), 'Phase 3 producer dependencies point to 02c-empathy');
+
+  // bounded pool should run all jobs while respecting the max width
+  let running = 0, peak = 0;
+  const jobs = [1, 2, 3, 4, 5, 6];
+  const out = await withConcurrency(jobs, 3, async (n) => {
+    running++; peak = Math.max(peak, running);
+    await new Promise(r => setTimeout(r, 10 + (n % 3) * 5));
+    running--;
+    return n * 2;
+  });
+  ok(peak <= 3, 'worker pool respects maxParallel bound');
+  ok(JSON.stringify(out) === JSON.stringify([2, 4, 6, 8, 10, 12]), 'worker pool preserves result order');
+
+  const done = new Set(['02c-empathy']);
+  const sim = (m.steps || []).map(s => s.parallel_group === 'phase3-producers' ? { ...s, status: 'pending' } : s);
+  const elig = eligibleGroupSteps(sim, done, 'phase3-producers');
+  ok(elig.length === 6, 'eligibleGroupSteps returns runnable Phase 3 steps when dependencies are satisfied');
+}
+
 // ---- run -------------------------------------------------------------------------
 console.log('UXR pipeline self-test — building fixture study at studies/_selftest …');
 try {
@@ -299,6 +450,13 @@ try {
   testRisk();
   testCompare();
   testDashboards();
+  testStyleLint();
+  testRoles();
+  testInterpretationSupport();
+  testRequests();
+  testCorrections();
+  testExport();
+  await testFastScheduling();
 } catch (e) {
   failN++;
   console.error('\n✗ Uncaught error during self-test:\n', e);

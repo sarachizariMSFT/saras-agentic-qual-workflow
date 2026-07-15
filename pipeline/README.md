@@ -1,8 +1,8 @@
-# UXR Qualitative Analysis Pipeline — v0.3.0
+# UXR Qualitative Analysis Pipeline — v0.4.0
 
 A traceable, eval-gated, multi-agent pipeline that turns Marvin interview transcripts and study
-artifacts into UXR findings, a report, and a story. It runs identically under **Claude Opus 4.8**
-and **GPT-5.5**, then diffs the two. Every claim traces back to a transcript quote.
+artifacts into UXR findings, a report, and a story. It runs under **Claude Opus 4.8** by default,
+and can optionally run **GPT-5.5** for comparison. Every claim traces back to a transcript quote.
 
 Built on the [Squad](https://github.com/bradygaster/squad) agent framework. Engine is zero-dependency Node.
 
@@ -59,6 +59,14 @@ Intake (+ Privacy: assign opaque codes P01/P02…, redact transcripts; Provenanc
 ```
 
 Run this whole flow **twice** (opus-4.8, gpt-5.5), then `compare.mjs` produces the model diff.
+
+### Speed mode for Phase 3 (`--fast`)
+
+Fast mode keeps all quality gates unchanged and only changes scheduling:
+- Phase 3 producers run through a bounded dependency-aware pool.
+- Pool width is `config.json > run.fastMaxParallel` (default 4).
+- As soon as one producer finishes, the next pending producer starts.
+- Checkpoints, eval gates, and retry/escalation behavior stay the same.
 
 ## Human checkpoints
 
@@ -200,7 +208,8 @@ node lib/server.mjs --port 4173                            # live dashboard (reb
 
 Ask Squad: **"Run the UXR pipeline on study `<id>` with both models."** The Conductor drives intake
 (interactively), spawns the specialists per `workflow.md`, gates with QA/Evals, stops at the three
-human checkpoints, and produces dashboards. See `workflow.md` for the exact orchestration and
+human checkpoints, and produces dashboards. Add `--fast` when you want faster Phase 3 scheduling.
+See `workflow.md` for the exact orchestration and
 `loop.md` for the learning loop.
 
 ## Marvin note

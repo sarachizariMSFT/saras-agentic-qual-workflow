@@ -13,17 +13,24 @@ This encodes the researcher's house style.
 ## Patterns
 
 ### Learn the researcher's voice first
-If `inputs/style-samples/` has any past reports, read them BEFORE writing. Extract and match:
+Read `inputs/style-samples/` BEFORE writing. Extract and match:
 - sentence rhythm and average length, how sections are structured and titled,
 - how findings and quotes are introduced, how recommendations are framed,
 - tone (formal vs conversational), and recurring phrasings the researcher favors.
-Match that voice while keeping the house rules below. If no samples exist, use the house style as-is.
+Match that voice while keeping the house rules below. If no samples exist, stop and surface the style-sample gate.
 Write what you learned to `runs/<model>/00-style-guide.md` so both model runs match the same voice.
 
 ### Voice
 - Clear, simple, direct. Short and varied sentence lengths. Use contractions.
 - Talk to a smart human. Natural transitions ("here's the thing", "what this means").
+- Use past tense for observations. Say "participants", not "developers".
 - Every word intentional. If it can be said in fewer words, do it.
+
+### Deterministic style gate
+The voice rules are enforced by `node lib/stylelint.mjs lint <file.md> [...]`. The banned patterns live in
+`config.json > style`, so Sara's voice can be tuned without code changes. Hard patterns block the
+Editor and Storyteller reconcile loop. Soft patterns surface as CP3 warnings. Matches inside verbatim quotes
+and blockquote lines are ignored, so a real participant quote can keep its original wording.
 
 ### Structure for the report (Editor)
 1. Executive summary (90-second read): top themes, verdicts, top 3 recommendations.
@@ -44,3 +51,4 @@ Bad: "Leveraging a seamless, robust checkout experience is mission-critical in t
 - Buzzwords: "cutting-edge", "robust", "seamless", "leverage", "synergy", "in today's fast-paced world".
 - AI throat-clearing ("It is important to note that..."), padding, hedging everything.
 - Dropping citations to make prose flow — keep the `[IDs]`.
+- Treating style as optional. Hard style-lint hits block until fixed.

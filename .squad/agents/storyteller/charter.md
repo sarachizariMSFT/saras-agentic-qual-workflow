@@ -23,7 +23,10 @@
 - I use `storytelling-method`: hook -> context -> tension (pains/papercuts) -> human moments -> resolution
   (recommendations) -> call to action. Personas are evidence-backed, labeled as illustrative where composited.
 - I script the highlight reel from Powerful-Moments' `clip_worthy` list, with timestamps for `marvin-clipper`.
-- If `inputs/style-samples/` exists, I match the researcher's narrative voice from those samples (see `humanizer`).
+- I match the researcher's narrative voice from the required `inputs/style-samples/` (see `humanizer`).
+- Before reconcile with Editor, I run `node lib/stylelint.mjs lint <files>` and fix any hard style hits.
+- Every participant quote keeps its timestamp and links to its Marvin `clip_url`.
+- After CP3 sign-off, I export the deliverable with `node lib/export.mjs docx <in.md> <out.docx>`.
 - Editor writes the factual report; I write the story. We reconcile so they don't contradict.
 
 ## Boundaries
@@ -58,11 +61,13 @@
 - [ ] Highlight-reel moments are actual clip-worthy candidates?
 - [ ] Did I avoid fabricating drama when evidence won't support it?
 - [ ] Did I reconcile with Editor?
+- [ ] Did `node lib/stylelint.mjs lint <files>` pass before reconcile?
+- [ ] Does every participant quote link to its `clip_url`?
 - [ ] Can a skeptic trace this story back to raw data?
 
 ## Output contract
 
-- `runs/<model>/09b-story.md` (+ `09b-story.html` via dashboard lib) and a `story` finding index referencing source finding IDs.
+- `runs/<model>/09b-story.md` (+ `09b-story.html` via dashboard lib), after CP3 sign-off `runs/<model>/10-story.docx`, and a `story` finding index referencing source finding IDs.
 
 ## Model
 

@@ -1,4 +1,4 @@
-# UXR Pipeline — Workflow — v0.3.0
+# UXR Pipeline — Workflow — v0.4.0
 
 How the Conductor runs a study. This is the operational contract behind the `pipeline-orchestration`
 skill. Loops are explicit and **capped at `config.json > loop.maxIterations` (default 10)**.
@@ -15,11 +15,16 @@ the session date/time lives **only** in the private crosswalk, never in the code
 `loadKey` fails closed, never silently skips. Set `UXR_PRIVATE_DIR` to keep the key file outside
 synced folders. Downstream agents see **codes only**; the name/company crosswalk stays in
 git-ignored `inputs/private/`.
+- Roster entries include an optional `role`: `participant` (default), `observer`, or `facilitator`. The key maps
+  participants to `P01...`, observers to `OBS01...`, and facilitators to `FAC01...`. Only participants land in the
+  public `inputs/participant-codes.md` and count toward saturation. Observer and facilitator names are still redacted everywhere.
 **Provenance gate (skill `provenance`):** `node lib/provenance.mjs check <studyRoot>` — each
 transcript must have a provenance record, a sha256 that has not changed since export, and a
 transcript-like structure (speaker labels + timestamps). This blocks an Ask-AI summary from
 masquerading as a raw transcript. Provenance is checked at CP1 before analysis begins.
-- Optional: WorkIQ pull for internal notes; sample past reports -> `inputs/style-samples/`.
+- Required: at least one writing-style sample in `inputs/style-samples/`. Run
+  `node lib/stylelint.mjs check-sample <studyRoot>` before CP1. If the configured style sample is missing, the run blocks.
+- Optional: WorkIQ pull for internal notes.
 - `node lib/run.mjs hash <studyRoot>` writes `intake-manifest.json` (sha256 of every input).
 - **▶ Human Checkpoint 1** — dashboard generated, run stops for approval.
 
@@ -57,6 +62,12 @@ masquerading as a raw transcript. Provenance is checked at CP1 before analysis b
 Spawn all six at once (Squad: "Team, analyze…"), each reading transcripts + evidence bank:
 `observed-behavior · verbatim · pain-points · papercuts · design-recommendations · powerful-moments`
 Each writes its step file (`03…`, `04…`, `05…`, `06…`, `07…`, `08b…`).
+In fast mode (`--fast`), the Conductor runs these six producers with a bounded, dependency-aware pool
+(`config.json > run.fastMaxParallel`, default 4). As soon as one producer finishes, the next pending
+producer starts. Gates and loop rules stay the same.
+`config.json > analysis.nonParticipantSpeakers` lists speaker labels that are not participants. Analysis and
+saturation exclude those labels, plus `OBS..` and `FAC..` codes, so observer, moderator, and product voice turns do
+not inflate participant counts.
 
 **Revision loop (per producer, capped at 10):**
 ```
@@ -74,6 +85,8 @@ produce -> node lib/evals.mjs <studyRoot> <model> <stepFile>
 **Devil's Advocate (Phase 4a):**
 - Runs after all producers pass. Verdicts each finding `holds | weak | unsupported` (`06-devils-advocate.json`).
 - **Now generates competing explanations** for major findings; flags ambiguous evidence.
+- Runs the `interpretation_support` soft eval to flag over-reading. It challenges enumerated categories when the
+  head noun is missing from cited quotes, and attribution claims when only said evidence exists without observed behavior.
 - **Challenge loop (capped at 10):** `unsupported`/`weak` findings route back to their author to revise or drop, then re-challenge. Same circuit breaker.
 
 **Mental Model Agent (Phase 4b):**
@@ -129,24 +142,38 @@ produce -> node lib/evals.mjs <studyRoot> <model> <stepFile>
 - Every claim/argument must cite a finding whose evidence passed Evidence-Verifier (exact quote + timestamp + clip).
   Quotes render with their timestamp and a link to the Marvin `clip_url`.
 - Now include product implications and design principles in narrative.
-- Both match `inputs/style-samples/` voice if present (skill `humanizer`).
+- Both match the required `inputs/style-samples/` voice (skill `humanizer`).
+- Before the reconcile loop, the report and story must pass the hard style-lint gate:
+  `node lib/stylelint.mjs lint <files>`. Hard style hits block reconciliation; soft hits surface as CP3 warnings.
 - **Reconcile loop (capped at 10):** Editor and Storyteller must not contradict; iterate until consistent.
 - **PII gate (hard, skill `pii-redaction`):** `node lib/pii.mjs scan <studyRoot>` scans **every run artifact**
   (not just the final report) and writes `runs/<model>/pii-report.json`. Results render as a CP2/CP3 dashboard
   banner. Any leaked name/company blocks — bounce to Editor/Storyteller. Set `UXR_PRIVATE_DIR` to keep the
   participant key outside synced folders.
 - QA/Evals final gate.
-- **▶ Human Checkpoint 3** — final sign-off. Triggers clips (marvin-clipper) if approved.
+- **Researcher-request gate:** `node lib/requests.mjs gate <studyRoot>` must pass before CP3 closes. Any open
+  researcher ask keeps sign-off open until it is addressed.
+- **▶ Human Checkpoint 3** — final sign-off. After approval, export deliverables with embedded Marvin clip links:
+  `node lib/export.mjs deliverables <runDir>`.
 
-### 7. Dual-model + comparison
-- Run phases 1–6 **twice**: `opus-4.8`, then `gpt-5.5`. Identical prompts, skills, inputs.
+### 7. Model runs + comparison
+- By default, run phases 1–6 once with `config.json > run.primaryModel` (`opus-4.8`).
+- `config.json > comparison.enabled` is `false` by default.
+- Fast mode is off by default (`config.json > run.fastModeDefault=false`). Enable with `--fast` to speed
+  Phase 3 producer scheduling without changing quality gates.
+- Only start the `gpt-5.5` pass and `compare.mjs` when `config.json > run.dualModel` is `true`, or when the
+  Conductor is invoked with `--dual`.
+- In dual mode, run phases 1–6 twice with identical prompts, skills, and inputs.
 - `node lib/compare.mjs <studyRoot>` -> `comparison/model-diff.{md,html}`.
 - `verifyRuns()` asserts the two runs used **different models** and **identical input hashes** before
   trusting any agreement number. Comparison also reports best-match theme Jaccard (content agreement,
-  not just type counts). Discloses `runsPerModel: 1` — a single run per model conflates model effect
+  not just type counts). Discloses `runsPerModel: 1`, because a single run per model conflates model effect
   with LLM sampling noise.
 
 ### 8. Retrospective ceremony -> learning loop
+- At CP3, collect each human correction with `node lib/corrections.mjs add <studyRoot> --target <finding|agent|skill|eval|schema|workflow|config|data> --root <prompt|skill-gap|rubric|schema|data|model|process> --problem "..." --correction "..." --change "..." [--target-id <e.g. editor>] [--model <opus-4.8|gpt-5.5|both|n/a>] [--turn N]`.
+- Apply durable fixes with `node lib/corrections.mjs apply <studyRoot> <COR-id> ["CHANGELOG ref"]`, then log them
+  to `pipeline/CHANGELOG.md` and the affected agent's `history.md`.
 - Reflect on disagreements + human corrections. Every action item -> a correction record. See `loop.md`.
 
 ## Commands cheat-sheet
@@ -155,6 +182,7 @@ node lib/run.mjs init <id> "<name>"
 node lib/run.mjs hash studies/<id>
 node lib/run.mjs manifest studies/<id> opus-4.8
 node lib/provenance.mjs check studies/<id>
+node lib/stylelint.mjs check-sample studies/<id>
 node lib/evals.mjs studies/<id> opus-4.8 studies/<id>/runs/opus-4.8/03-pain-points.json
 node lib/saturation.mjs studies/<id> opus-4.8
 node lib/risk.mjs scan studies/<id> opus-4.8
@@ -165,8 +193,17 @@ node lib/loop.mjs attempt studies/<id> opus-4.8 03-pain-points fail "hallucinati
 node lib/loop.mjs state studies/<id> opus-4.8
 node lib/loop.mjs unblock studies/<id> opus-4.8 03-pain-points "manually verified; quote confirmed in transcript"
 node lib/dashboard.mjs studies/<id>
-node lib/compare.mjs studies/<id>
 node lib/pii.mjs scan studies/<id>
+node lib/stylelint.mjs lint studies/<id>/runs/opus-4.8/09-report.md studies/<id>/runs/opus-4.8/09b-story.md
+node lib/requests.mjs add studies/<id> "what about settings defaults?" --turn 12
+node lib/requests.mjs resolve studies/<id> REQ-001 "covered in the settings section"
+node lib/requests.mjs list studies/<id> open
+node lib/requests.mjs gate studies/<id>
+node lib/export.mjs deliverables studies/<id>/runs/opus-4.8
+node lib/corrections.mjs add studies/<id> --target skill --root rubric --problem "Severity was too high." --correction "Treat label-only issues as minor." --change "Update severity-scoring examples." --target-id severity-scoring --model both --turn 18
+node lib/corrections.mjs list studies/<id> open
+node lib/corrections.mjs apply studies/<id> COR-2026-07-08-01 "CHANGELOG 2026-07-08"
+node lib/compare.mjs studies/<id>
 node lib/server.mjs --port 4173
 ```
 

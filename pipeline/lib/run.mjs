@@ -17,6 +17,14 @@ const TEMPLATE = path.join(STUDIES, '_TEMPLATE');
 const CONFIG = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config.json'), 'utf8'));
 const MAX_LOOP = CONFIG.loop.maxIterations;
 const MODELS = CONFIG.models;
+const RUN = CONFIG.run || {};
+const PIPELINE_VERSION = CONFIG.pipeline_version || '0.4.0';
+const FAST_DEFAULT = RUN.fastModeDefault === true;
+const FAST_MAX_PARALLEL = Math.max(1, Number(RUN.fastMaxParallel) || 4);
+// Single-model by default: run only the primary model unless dual-model comparison is switched on
+// (config.run.dualModel or the Conductor's --dual flag). The skipped second pass was routinely
+// unwanted and showed up as a confusing, half-finished phase.
+const ACTIVE_MODELS = RUN.dualModel ? MODELS : [RUN.primaryModel || MODELS[0]];
 
 function copyRecursive(src, dst) {
   const stat = fs.statSync(src);
@@ -48,9 +56,12 @@ export function initStudy(studyId, name) {
   if (fs.existsSync(dst)) { console.error(`Study '${studyId}' already exists.`); process.exit(1); }
   copyRecursive(TEMPLATE, dst);
   fs.writeFileSync(path.join(dst, 'study.json'), JSON.stringify({
-    study_id: studyId, name: name || studyId, created_at: new Date().toISOString(), models: MODELS,
+    study_id: studyId, name: name || studyId, created_at: new Date().toISOString(),
+    models: ACTIVE_MODELS, primary_model: RUN.primaryModel || MODELS[0], dual_model: !!RUN.dualModel,
+    fast_mode_default: FAST_DEFAULT, fast_max_parallel: FAST_MAX_PARALLEL,
   }, null, 2));
-  console.log(`✓ Created studies/${studyId} from _TEMPLATE`);
+  console.log(`✓ Created studies/${studyId} from _TEMPLATE` +
+    ` — ${RUN.dualModel ? `dual-model (${ACTIVE_MODELS.join(', ')})` : `single-model (${ACTIVE_MODELS[0]})`}`);
   return dst;
 }
 
@@ -74,37 +85,37 @@ export function scaffoldManifest(studyRoot, model, { fresh = false } = {}) {
   // prep/coding/experience/implication steps are non-eval producers that advance like 00-kickoff.
   const stepDefs = [
     // Phase 1 — data readiness (pre-analysis), part of CP1
-    ['00b-data-quality-report', 'data-integrity'],
-    ['01b-participant-narratives', 'participant-narrative'],
+    { step: '00b-data-quality-report', agent: 'data-integrity', phase: 'phase-1' },
+    { step: '01b-participant-narratives', agent: 'participant-narrative', phase: 'phase-1', depends_on: ['00b-data-quality-report'] },
     // Phase 1c — kickoff ceremony
-    ['00-kickoff', 'conductor'],
+    { step: '00-kickoff', agent: 'conductor', phase: 'phase-1c', depends_on: ['01b-participant-narratives'] },
     // Phase 2a/2b — evidence bank + open coding (run in parallel)
-    ['02b-evidence-bank', 'evidence-extraction'],
-    ['02-open-codes', 'open-coding'],
+    { step: '02b-evidence-bank', agent: 'evidence-extraction', phase: 'phase-2a', depends_on: ['00-kickoff'], parallel_group: 'phase-2a' },
+    { step: '02-open-codes', agent: 'open-coding', phase: 'phase-2a', depends_on: ['00-kickoff'], parallel_group: 'phase-2a' },
     // Phase 2c — empathy building (after the evidence bank)
-    ['02c-empathy', 'empathy-builder'],
+    { step: '02c-empathy', agent: 'empathy-builder', phase: 'phase-2c', depends_on: ['02b-evidence-bank', '02-open-codes'] },
     // Phase 3 — six parallel analysis producers (eval-bearing)
-    ['01-observed-behavior', 'observed-behavior'],
-    ['02-verbatim', 'verbatim'],
-    ['03-pain-points', 'pain-points'],
-    ['04-papercuts', 'papercuts'],
-    ['05-design-recommendations', 'design-recommendations'],
-    ['06b-powerful-moments', 'powerful-moments'],
+    { step: '01-observed-behavior', agent: 'observed-behavior', phase: 'phase-3', depends_on: ['02c-empathy'], parallel_group: 'phase3-producers' },
+    { step: '02-verbatim', agent: 'verbatim', phase: 'phase-3', depends_on: ['02c-empathy'], parallel_group: 'phase3-producers' },
+    { step: '03-pain-points', agent: 'pain-points', phase: 'phase-3', depends_on: ['02c-empathy'], parallel_group: 'phase3-producers' },
+    { step: '04-papercuts', agent: 'papercuts', phase: 'phase-3', depends_on: ['02c-empathy'], parallel_group: 'phase3-producers' },
+    { step: '05-design-recommendations', agent: 'design-recommendations', phase: 'phase-3', depends_on: ['02c-empathy'], parallel_group: 'phase3-producers' },
+    { step: '06b-powerful-moments', agent: 'powerful-moments', phase: 'phase-3', depends_on: ['02c-empathy'], parallel_group: 'phase3-producers' },
     // Phase 4 — challenge (Devil's Advocate + Mental Model)
-    ['06-devils-advocate', 'devils-advocate'],
-    ['05b-mental-models', 'mental-model'],
+    { step: '06-devils-advocate', agent: 'devils-advocate', phase: 'phase-4', depends_on: ['01-observed-behavior', '02-verbatim', '03-pain-points', '04-papercuts', '05-design-recommendations', '06b-powerful-moments'] },
+    { step: '05b-mental-models', agent: 'mental-model', phase: 'phase-4', depends_on: ['06-devils-advocate'] },
     // Phase 5 — synthesis + saturation
-    ['07-synthesis', 'synthesizer'],
-    ['07b-saturation', 'qa-evals'],
+    { step: '07-synthesis', agent: 'synthesizer', phase: 'phase-5', depends_on: ['05b-mental-models'] },
+    { step: '07b-saturation', agent: 'qa-evals', phase: 'phase-5', depends_on: ['07-synthesis'] },
     // Phase 5b/5c/5d — verification, risk flagging, product implications
-    ['08b-evidence-verify', 'evidence-verifier'],
-    ['08c-risk-flags', 'risk-flagger'],
-    ['08-product-implications', 'product-implication'],
+    { step: '08b-evidence-verify', agent: 'evidence-verifier', phase: 'phase-5b', depends_on: ['07b-saturation'] },
+    { step: '08c-risk-flags', agent: 'risk-flagger', phase: 'phase-5c', depends_on: ['08b-evidence-verify'] },
+    { step: '08-product-implications', agent: 'product-implication', phase: 'phase-5d', depends_on: ['08c-risk-flags'] },
     // Phase 6 — final QA gate + reporting (Editor ∥ Storyteller) + privacy sweep
-    ['08-qa-evals', 'qa-evals'],
-    ['09-report', 'editor'],
-    ['09b-story', 'storyteller'],
-    ['pii-scan', 'privacy'],
+    { step: '08-qa-evals', agent: 'qa-evals', phase: 'phase-6', depends_on: ['08-product-implications'] },
+    { step: '09-report', agent: 'editor', phase: 'phase-6', depends_on: ['08-qa-evals'], parallel_group: 'phase-6-reporting' },
+    { step: '09b-story', agent: 'storyteller', phase: 'phase-6', depends_on: ['08-qa-evals'], parallel_group: 'phase-6-reporting' },
+    { step: 'pii-scan', agent: 'privacy', phase: 'phase-6', depends_on: ['09-report', '09b-story'] },
   ];
 
   // Preserve human-owned state on re-scaffold: checkpoint sign-offs and per-step human overrides
@@ -112,8 +123,9 @@ export function scaffoldManifest(studyRoot, model, { fresh = false } = {}) {
   const prior = fresh ? null : readJSONSafe(path.join(studyRoot, 'runs', model, 'run-manifest.json'));
   const priorStepByName = new Map((prior?.steps || []).map(s => [s.step, s]));
 
-  const steps = stepDefs.map(([step, agent]) => {
-    const base = { step, agent, status: 'pending', output: `runs/${model}/${step}.json`, attempts: 0, max_attempts: MAX_LOOP };
+  const steps = stepDefs.map(def => {
+    const { step, agent, ...meta } = def;
+    const base = { step, agent, status: 'pending', output: `runs/${model}/${step}.json`, attempts: 0, max_attempts: MAX_LOOP, ...meta };
     const p = priorStepByName.get(step);
     if (p?.unblocked_by_human) base.unblocked_by_human = p.unblocked_by_human; // keep audit trail
     return base;
@@ -132,10 +144,14 @@ export function scaffoldManifest(studyRoot, model, { fresh = false } = {}) {
     run_id: prior?.run_id || `${path.basename(studyRoot)}-${model}-${Date.now()}`,
     study_id: path.basename(studyRoot),
     model,
-    pipeline_version: '0.3.0',
+    pipeline_version: PIPELINE_VERSION,
     created_at: prior?.created_at || new Date().toISOString(),
     rescaffolded_at: prior ? new Date().toISOString() : undefined,
     inputs,
+    execution: {
+      mode: FAST_DEFAULT ? 'fast' : 'normal',
+      fast: { enabled: FAST_DEFAULT, max_parallel: FAST_MAX_PARALLEL, strategy: 'dependency-aware-pool', scope: 'phase3-producers' },
+    },
     steps,
     checkpoints,
   };

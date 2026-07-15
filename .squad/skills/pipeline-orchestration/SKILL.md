@@ -1,14 +1,14 @@
 ---
 name: "pipeline-orchestration"
-description: "The topology, checkpoints, and dual-model run rules the Conductor follows."
+description: "The topology, checkpoints, and model run rules the Conductor follows."
 domain: "orchestration"
 confidence: "high"
 source: "manual"
 ---
 
 ## Context
-Used by the Conductor. Defines exactly how a study run flows, where it stops for humans, and how the two
-model runs stay identical so their outputs are comparable.
+Used by the Conductor. Defines exactly how a study run flows, where it stops for humans, and when a second
+model run is needed for comparison.
 
 ## Patterns
 
@@ -26,9 +26,14 @@ Intake ─▶ [Human Checkpoint 1] ─▶ Kickoff ceremony
                                       └▶ Retrospective ceremony
 ```
 
-### Dual-model rule
-- Run the ENTIRE pipeline twice: once `opus-4.8`, once `gpt-5.5`, with identical prompts, skills, inputs.
-- Outputs go to `runs/opus-4.8/` and `runs/gpt-5.5/`. Never mix models within a run.
+### Model run rule
+- Run one model by default: `config.json > run.primaryModel` (`opus-4.8`).
+- Keep comparison off by default with `config.json > comparison.enabled` set to false.
+- Keep fast mode off by default (`config.json > run.fastModeDefault=false`).
+- In fast mode (`--fast`), run Phase 3 producers with a bounded dependency-aware pool
+  (`config.json > run.fastMaxParallel`, default 4). Keep eval gates and checkpoints unchanged.
+- Start `gpt-5.5` and comparison only when `config.json > run.dualModel` is true, or when the Conductor is invoked with `--dual`.
+- In dual mode, outputs go to `runs/opus-4.8/` and `runs/gpt-5.5/`. Never mix models within a run.
 - After both complete and pass Checkpoint 3, produce `comparison/model-diff.(md|html)`.
 - Inputs are hashed in each manifest so the comparison is proven to be on identical inputs.
 
@@ -37,6 +42,12 @@ Intake ─▶ [Human Checkpoint 1] ─▶ Kickoff ceremony
 2. **After Synthesis** — review themes, hypothesis verdicts, contradictions before reporting.
 3. **Final sign-off** — approve the report + story; triggers the Retrospective and (optionally) clips.
 At each, the Conductor sets manifest status `awaiting_human` and generates the checkpoint dashboard, then stops.
+Before CP3 can close, the Conductor runs `node lib/requests.mjs gate <studyRoot>`. Any open researcher request keeps
+sign-off open.
+
+### Visibility
+For every step, emit one compact progress line, for example `[7/23] pain-points: running evals`. Use one stable
+task and agent name across the whole run, and offer a clear cancel path so the researcher can stop the run.
 
 ### Status discipline
 Manifest step status flows `pending -> running -> done|failed|awaiting_human|blocked`. Never mark done without the
@@ -58,3 +69,6 @@ Advocate on that stream, and routes back to the author.
 - Starting Synthesis before all producers pass their gates.
 - Skipping a human checkpoint to save time.
 - Different model per agent in one run — breaks the comparison.
+- Starting the second model when `run.dualModel` is false.
+- Turning on fast mode and relaxing gates. Fast mode is scheduling only.
+- Closing CP3 with open researcher requests.

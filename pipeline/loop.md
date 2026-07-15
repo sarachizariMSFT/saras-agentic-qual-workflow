@@ -9,10 +9,21 @@ Every loop pass is bounded; the whole learning loop honors the cap in `config.js
 - The Retrospective ceremony after final sign-off, OR
 - `squad loop --file pipeline/loop.md`
 
+## Correction commands
+```powershell
+node lib/corrections.mjs add <studyRoot> --target <finding|agent|skill|eval|schema|workflow|config|data> --root <prompt|skill-gap|rubric|schema|data|model|process> --problem "..." --correction "..." --change "..." [--target-id <e.g. editor>] [--model <opus-4.8|gpt-5.5|both|n/a>] [--turn N]
+node lib/corrections.mjs list <studyRoot> [open|applied|all]
+node lib/corrections.mjs apply <studyRoot> <COR-id> ["CHANGELOG ref"]
+```
+
+## CP3 routine
+At CP3, the Retrospective collects each human correction as a record, applies the durable fix to the target
+artifact, marks the record applied, and logs it to `pipeline/CHANGELOG.md` plus the affected agent's `history.md`.
+
 ## Each cycle (bounded — one pass per correction, max 10 open corrections per cycle)
 
-1. **Collect.** Read open records in `studies/<id>/corrections/*.json` (schema in skill `learning-loop`).
-2. **Diagnose.** For each, classify `root_cause`: `prompt | skill-gap | rubric | schema | data | model`.
+1. **Collect.** Read open records in `studies/<id>/corrections/*.json` (schema in `pipeline/schemas/correction.schema.json`).
+2. **Diagnose.** For each, classify `root_cause`: `prompt | skill-gap | rubric | schema | data | model | process`.
 3. **Apply the smallest durable fix** to the right artifact:
    - `prompt` / behavior -> the agent's `.squad/agents/<name>/charter.md`
    - `skill-gap` -> the relevant `.squad/skills/<name>/SKILL.md`
@@ -20,9 +31,10 @@ Every loop pass is bounded; the whole learning loop honors the cap in `config.js
    - `schema` -> `pipeline/schemas/finding.schema.json` (run Design Review first)
    - `data` -> intake procedure in `uxr-intake`
    - `model` -> note it; prefer fixes that help both runs (divergence weakens the comparison)
+   - `process` -> workflow or orchestration behavior
 4. **Log.** Append to `pipeline/CHANGELOG.md`: date, correction id, files changed, one-line rationale.
 5. **Remember.** Append the learning to the affected agent's `history.md`.
-6. **Close.** Mark the record `applied`.
+6. **Close.** Mark the record `applied` with `node lib/corrections.mjs apply <studyRoot> <COR-id> ["CHANGELOG ref"]`.
 7. **Guard.** If the change touches a shared contract (schema, eval rubric, workflow), run Design Review.
 
 ## Circuit breaker

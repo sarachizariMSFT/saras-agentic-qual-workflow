@@ -12,6 +12,14 @@ import { fileURLToPath } from 'node:url';
 import { readJSONSafe, writeJSONAtomic } from './fsx.mjs';
 import { listTranscripts } from './marvin-adapter.mjs';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CONFIG = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'config.json'), 'utf8'));
+// Speaker labels that are NOT study participants (the product's own voice, moderator, internal
+// observers). Excluded from counts so a product "Agent" turn can't be miscounted as a participant.
+const NON_PARTICIPANTS = new Set((CONFIG.analysis?.nonParticipantSpeakers || []).map(s => String(s).toLowerCase()));
+// Observer/facilitator roster codes (OBS.., FAC..) are non-participants too.
+const isParticipantCode = c => c && !NON_PARTICIPANTS.has(String(c).toLowerCase()) && !/^(OBS|FAC)\d+$/i.test(String(c));
+
 const PRODUCER_BASES = ['01-observed-behavior','02-verbatim','03-pain-points','04-papercuts','05-design-recommendations','06b-powerful-moments','07-synthesis'];
 
 function loadStep(runDir, base) {
@@ -26,7 +34,7 @@ function loadStep(runDir, base) {
 const supportersOf = f => new Set([
   ...((f.evidence || []).map(e => e.participant).filter(Boolean)),
   ...((f.supporting_participants || []).filter(Boolean)),
-]);
+].filter(isParticipantCode));
 
 export function computeSaturation(studyRoot, model) {
   const runDir = path.join(studyRoot, 'runs', model);
